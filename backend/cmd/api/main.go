@@ -26,6 +26,7 @@ func main() {
 	usuarioRepo := repository.NewUsuarioRepository(db)
 	escolaRepo := repository.NewEscolaRepository(db)
 	alunoRepo := repository.NewAlunoRepository(db)
+	mensalidadeRepo := repository.NewMensalidadeRepository(db)
 
 	if err := seed(db, empresaRepo, usuarioRepo, escolaRepo, alunoRepo); err != nil {
 		log.Printf("Seed: %v", err)
@@ -35,6 +36,7 @@ func main() {
 	empresaHandler := handlers.NewEmpresaHandler(empresaRepo)
 	escolaHandler := handlers.NewEscolaHandler(escolaRepo)
 	alunoHandler := handlers.NewAlunoHandler(alunoRepo)
+	mensalidadeHandler := handlers.NewMensalidadeHandler(mensalidadeRepo, alunoRepo)
 
 	mux := http.NewServeMux()
 
@@ -57,6 +59,13 @@ func main() {
 	mux.Handle("POST /api/alunos", middleware.Auth(http.HandlerFunc(alunoHandler.Create)))
 	mux.Handle("PUT /api/alunos/{id}", middleware.Auth(http.HandlerFunc(alunoHandler.Update)))
 	mux.Handle("DELETE /api/alunos/{id}", middleware.Auth(http.HandlerFunc(alunoHandler.Delete)))
+
+	// Mensalidades
+	mux.Handle("GET /api/mensalidades", middleware.Auth(http.HandlerFunc(mensalidadeHandler.List)))
+	mux.Handle("POST /api/mensalidades", middleware.Auth(http.HandlerFunc(mensalidadeHandler.Create)))
+	mux.Handle("POST /api/mensalidades/gerar", middleware.Auth(http.HandlerFunc(mensalidadeHandler.BulkGenerate)))
+	mux.Handle("PUT /api/mensalidades/{id}", middleware.Auth(http.HandlerFunc(mensalidadeHandler.Update)))
+	mux.Handle("DELETE /api/mensalidades/{id}", middleware.Auth(http.HandlerFunc(mensalidadeHandler.Delete)))
 
 	// CORS
 	handler := cors.New(cors.Options{

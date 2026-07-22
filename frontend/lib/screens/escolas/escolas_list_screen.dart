@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/app_theme.dart';
+import '../../core/section_card.dart';
 import '../../models/escola.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_data_service.dart';
@@ -82,16 +83,15 @@ class _EscolasListScreenState extends State<EscolasListScreen> {
                               ),
                             ],
                           ),
-                          if (!isSuporte)
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                minimumSize: const Size(160, 48),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              ),
-                              onPressed: () => _abrirFormulario(context),
-                              icon: const Icon(Icons.add),
-                              label: const Text('Nova Escola'),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(160, 48),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
+                            onPressed: () => _abrirFormulario(context),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Nova Escola'),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -264,7 +264,7 @@ class _EscolaFormScreenState extends State<EscolaFormScreen> {
     final auth = context.read<AuthProvider>();
     final empresaId = widget.escola?.empresaId ?? auth.usuario?.empresaId;
 
-    if (empresaId == null && !(auth.usuario?.isSuporte ?? false)) {
+    if (empresaId == null || empresaId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Usuário sem empresa vinculada.')),
       );
@@ -275,7 +275,7 @@ class _EscolaFormScreenState extends State<EscolaFormScreen> {
     try {
       final escola = Escola(
         id: widget.escola?.id ?? 'new-${const Uuid().v4()}',
-        empresaId: empresaId!,
+        empresaId: empresaId,
         nome: _nomeController.text.trim(),
         enderecoCompleto: _enderecoController.text.trim(),
         ativa: _ativa,
@@ -302,41 +302,70 @@ class _EscolaFormScreenState extends State<EscolaFormScreen> {
       appBar: AppBar(
         title: Text(isEdicao ? 'Editar Escola' : 'Nova Escola'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _nomeController,
-                decoration: const InputDecoration(labelText: 'Nome da escola'),
-                validator: (value) =>
-                    value == null || value.trim().isEmpty ? 'Informe o nome.' : null,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                children: [
+                  SectionCard(
+                    title: 'Dados da Escola',
+                    icon: Icons.school_outlined,
+                    children: [
+                      TextFormField(
+                        controller: _nomeController,
+                        decoration: const InputDecoration(
+                          labelText: 'Nome da escola',
+                          prefixIcon: Icon(Icons.school),
+                        ),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty ? 'Informe o nome.' : null,
+                      ),
+                      const SizedBox(height: 20),
+                      TextFormField(
+                        controller: _enderecoController,
+                        decoration: const InputDecoration(
+                          labelText: 'Endereço completo',
+                          prefixIcon: Icon(Icons.location_on_outlined),
+                          alignLabelWithHint: true,
+                        ),
+                        maxLines: 3,
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty ? 'Informe o endereço.' : null,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SectionCard(
+                    title: 'Status',
+                    icon: Icons.toggle_on_outlined,
+                    children: [
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Escola ativa'),
+                        subtitle: Text(
+                          _ativa ? 'Visível na listagem e disponível para novos alunos.' : 'Inativa e oculta nas novas associações.',
+                          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        ),
+                        value: _ativa,
+                        onChanged: (value) => setState(() => _ativa = value),
+                        activeThumbColor: AppTheme.secondary,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  ElevatedButton(
+                    onPressed: _salvando ? null : _salvar,
+                    child: _salvando
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : Text(isEdicao ? 'Salvar alterações' : 'Cadastrar escola'),
+                  ),
+                ],
               ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _enderecoController,
-                decoration: const InputDecoration(labelText: 'Endereço completo'),
-                maxLines: 3,
-                validator: (value) =>
-                    value == null || value.trim().isEmpty ? 'Informe o endereço.' : null,
-              ),
-              const SizedBox(height: 20),
-              SwitchListTile(
-                title: const Text('Ativa'),
-                value: _ativa,
-                onChanged: (value) => setState(() => _ativa = value),
-                activeThumbColor: AppTheme.secondary,
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: _salvando ? null : _salvar,
-                child: _salvando
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : Text(isEdicao ? 'Salvar alterações' : 'Cadastrar escola'),
-              ),
-            ],
+            ),
           ),
         ),
       ),

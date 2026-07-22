@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/aluno.dart';
 import '../models/escola.dart';
+import '../models/mensalidade.dart';
 import '../models/usuario.dart';
 import 'api_client.dart';
 
@@ -82,6 +83,51 @@ class ApiDataService extends ChangeNotifier {
 
   Future<void> removerAluno(String id) async {
     final response = await _client.delete('/alunos/$id');
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw _error(response);
+    }
+  }
+
+  Future<List<Mensalidade>> listarMensalidades() async {
+    final response = await _client.get('/mensalidades');
+    if (response.statusCode != 200) {
+      throw _error(response);
+    }
+    final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+    return data.map((e) => Mensalidade.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<int> gerarMensalidades({String? alunoId, required int quantidade, required bool gerarTodos}) async {
+    final response = await _client.post('/mensalidades/gerar', {
+      'aluno_id': alunoId,
+      'quantidade': quantidade,
+      'gerar_todos': gerarTodos,
+    });
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw _error(response);
+    }
+    final data = ApiClient.decodeBody(response);
+    return (data['geradas'] as num).toInt();
+  }
+
+  Future<Mensalidade> salvarMensalidade(Mensalidade mensalidade) async {
+    http.Response response;
+    if (mensalidade.id.isEmpty) {
+      throw _msg('ID da mensalidade não pode estar vazio');
+    }
+    if (mensalidade.id.startsWith('new-')) {
+      response = await _client.post('/mensalidades', mensalidade.toJson());
+    } else {
+      response = await _client.put('/mensalidades/${mensalidade.id}', mensalidade.toJson());
+    }
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw _error(response);
+    }
+    return Mensalidade.fromJson(ApiClient.decodeBody(response));
+  }
+
+  Future<void> removerMensalidade(String id) async {
+    final response = await _client.delete('/mensalidades/$id');
     if (response.statusCode != 204 && response.statusCode != 200) {
       throw _error(response);
     }

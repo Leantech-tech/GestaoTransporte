@@ -76,6 +76,24 @@ CREATE TABLE IF NOT EXISTS alunos (
 );
 
 -- ------------------------------------------------------------
+-- 5. Tabela de mensalidades
+-- Controle financeiro de mensalidades por aluno.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS mensalidades (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    empresa_id      UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+    aluno_id        UUID NOT NULL REFERENCES alunos(id) ON DELETE CASCADE,
+    valor           NUMERIC(10, 2) NOT NULL,
+    data_vencimento DATE NOT NULL,
+    data_pagamento  DATE,
+    status          VARCHAR(20) NOT NULL DEFAULT 'pendente'
+                      CHECK (status IN ('pendente', 'pago', 'cancelado')),
+    observacao      TEXT,
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ------------------------------------------------------------
 -- Índices para performance e integridade
 -- ------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_usuarios_email      ON usuarios(email);
@@ -84,6 +102,9 @@ CREATE INDEX IF NOT EXISTS idx_escolas_empresa     ON escolas(empresa_id);
 CREATE INDEX IF NOT EXISTS idx_alunos_empresa      ON alunos(empresa_id);
 CREATE INDEX IF NOT EXISTS idx_alunos_escola       ON alunos(escola_id);
 CREATE INDEX IF NOT EXISTS idx_alunos_nome         ON alunos(nome);
+CREATE INDEX IF NOT EXISTS idx_mensalidades_empresa ON mensalidades(empresa_id);
+CREATE INDEX IF NOT EXISTS idx_mensalidades_aluno   ON mensalidades(aluno_id);
+CREATE INDEX IF NOT EXISTS idx_mensalidades_vencimento ON mensalidades(data_vencimento);
 
 -- ------------------------------------------------------------
 -- Função para atualizar o updated_at automaticamente
@@ -111,6 +132,10 @@ CREATE TRIGGER trg_escolas_updated_at
 
 CREATE TRIGGER trg_alunos_updated_at
     BEFORE UPDATE ON alunos
+    FOR EACH ROW EXECUTE FUNCTION atualiza_updated_at();
+
+CREATE TRIGGER trg_mensalidades_updated_at
+    BEFORE UPDATE ON mensalidades
     FOR EACH ROW EXECUTE FUNCTION atualiza_updated_at();
 
 -- ------------------------------------------------------------

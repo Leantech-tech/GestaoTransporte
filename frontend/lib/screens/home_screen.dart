@@ -8,6 +8,9 @@ import '../models/escola.dart';
 import '../providers/auth_provider.dart';
 import 'alunos/alunos_list_screen.dart';
 import 'escolas/escolas_list_screen.dart';
+import 'financeiro/financeiro_hub_screen.dart';
+import 'financeiro/gerar_mensalidade_screen.dart';
+import 'financeiro/receber_mensalidade_screen.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -63,6 +66,59 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _abrirFormularioEscola(BuildContext context) async {
+    final result = await Navigator.of(context).push<Escola?>(
+      MaterialPageRoute(builder: (_) => const EscolaFormScreen()),
+    );
+    if (result != null) _carregarDados();
+  }
+
+  Future<void> _abrirFormularioAluno(BuildContext context) async {
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const AlunoFormScreen()),
+    );
+    if (result == true) _carregarDados();
+  }
+
+  // Índices de navegação:
+  // 0 = Dashboard
+  // 1 = Escolas
+  // 2 = Alunos
+  // 3 = Financeiro Hub (mobile)
+  // 4 = Gerar Mensalidade
+  // 5 = Receber Mensalidade
+
+  String get _tituloAppBar {
+    switch (_selectedIndex) {
+      case 0:
+        return 'Visão Geral';
+      case 1:
+        return 'Gestão de Escolas';
+      case 2:
+        return 'Gestão de Alunos';
+      case 3:
+        return 'Financeiro';
+      case 4:
+        return 'Gerar Mensalidade';
+      case 5:
+        return 'Receber Mensalidade';
+      default:
+        return '';
+    }
+  }
+
+  VoidCallback? get _acaoAdicionar {
+    if (_selectedIndex == 1) {
+      return () => _abrirFormularioEscola(context);
+    }
+    if (_selectedIndex == 2) {
+      return () => _abrirFormularioAluno(context);
+    }
+    return null;
+  }
+
+  int get _bottomNavIndex => _selectedIndex <= 3 ? _selectedIndex : 3;
+
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 800;
@@ -71,6 +127,12 @@ class _HomeScreenState extends State<HomeScreen> {
       _buildDashboardView(),
       const EscolasListScreen(),
       const AlunosListScreen(),
+      FinanceiroHubScreen(
+        onGerarMensalidade: () => setState(() => _selectedIndex = 4),
+        onReceberMensalidade: () => setState(() => _selectedIndex = 5),
+      ),
+      const GerarMensalidadeScreen(),
+      const ReceberMensalidadeScreen(),
     ];
 
     if (isWide) {
@@ -90,13 +152,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   // Top Navbar Sofisticada
                   _TopNavbar(
-                    title: _selectedIndex == 0
-                        ? 'Visão Geral'
-                        : _selectedIndex == 1
-                            ? 'Gestão de Escolas'
-                            : 'Gestão de Alunos',
+                    title: _tituloAppBar,
                     onLogout: _logout,
                     onRefresh: _carregarDados,
+                    onAdd: _acaoAdicionar,
                   ),
                   Expanded(child: paginas[_selectedIndex]),
                 ],
@@ -120,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         child: NavigationBar(
-          selectedIndex: _selectedIndex,
+          selectedIndex: _bottomNavIndex,
           elevation: 0,
           backgroundColor: Colors.white,
           indicatorColor: AppTheme.primary.withValues(alpha: 0.12),
@@ -142,6 +201,11 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icon(Icons.groups_outlined),
               selectedIcon: Icon(Icons.groups_rounded, color: AppTheme.primary),
               label: 'Alunos',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.account_balance_wallet_outlined),
+              selectedIcon: Icon(Icons.account_balance_wallet_rounded, color: AppTheme.primary),
+              label: 'Financeiro',
             ),
           ],
         ),
@@ -402,6 +466,8 @@ class _CustomSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final financeiroSelecionado = selectedIndex == 4 || selectedIndex == 5;
+
     return Container(
       width: 250,
       decoration: const BoxDecoration(
@@ -492,6 +558,24 @@ class _CustomSidebar extends StatelessWidget {
             label: 'Alunos',
             isSelected: selectedIndex == 2,
             onTap: () => onDestinationSelected(2),
+          ),
+          _ExpandableSidebarItem(
+            icon: Icons.account_balance_wallet_rounded,
+            label: 'Financeiro',
+            isExpanded: financeiroSelecionado,
+            isSelected: financeiroSelecionado,
+            children: [
+              _SidebarSubItem(
+                label: 'Gerar mensalidade',
+                isSelected: selectedIndex == 4,
+                onTap: () => onDestinationSelected(4),
+              ),
+              _SidebarSubItem(
+                label: 'Receber mensalidade',
+                isSelected: selectedIndex == 5,
+                onTap: () => onDestinationSelected(5),
+              ),
+            ],
           ),
 
           const Spacer(),
@@ -591,11 +675,13 @@ class _TopNavbar extends StatelessWidget {
   final String title;
   final VoidCallback onLogout;
   final VoidCallback onRefresh;
+  final VoidCallback? onAdd;
 
   const _TopNavbar({
     required this.title,
     required this.onLogout,
     required this.onRefresh,
+    this.onAdd,
   });
 
   @override
@@ -618,6 +704,14 @@ class _TopNavbar extends StatelessWidget {
             ),
           ),
           const Spacer(),
+          if (onAdd != null) ...[
+            IconButton(
+              icon: const Icon(Icons.add, color: AppTheme.primary),
+              tooltip: 'Novo',
+              onPressed: onAdd,
+            ),
+            const SizedBox(width: 8),
+          ],
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: AppTheme.textSecondary),
             tooltip: 'Atualizar',

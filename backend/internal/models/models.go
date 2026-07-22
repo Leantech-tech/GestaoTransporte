@@ -44,17 +44,31 @@ type Escola struct {
 }
 
 type Aluno struct {
-	ID                   string    `json:"id"`
-	EmpresaID            string    `json:"empresa_id"`
-	EscolaID             string    `json:"escola_id"`
-	Nome                 string    `json:"nome"`
-	Endereco             string    `json:"endereco"`
-	Mensalidade          float64   `json:"mensalidade"`
-	Valor                float64   `json:"valor"`
-	DiaVencimento        int       `json:"dia_vencimento"`
-	ResponsavelFinanceiro string   `json:"responsavel_financeiro"`
-	ResponsavelTelefone  string    `json:"responsavel_telefone"`
-	Ativo                bool      `json:"ativo"`
-	CreatedAt            time.Time `json:"created_at"`
-	UpdatedAt            time.Time `json:"updated_at"`
+	ID                    string    `json:"id"`
+	EmpresaID             string    `json:"empresa_id"`
+	EscolaID              string    `json:"escola_id"`
+	Nome                  string    `json:"nome"`
+	Endereco              string    `json:"endereco"`
+	Mensalidade           float64   `json:"mensalidade"`
+	Valor                 float64   `json:"valor"`
+	DiaVencimento         int       `json:"dia_vencimento"`
+	ResponsavelFinanceiro string    `json:"responsavel_financeiro"`
+	ResponsavelTelefone   string    `json:"responsavel_telefone"`
+	Ativo                 bool      `json:"ativo"`
+	CreatedAt             time.Time `json:"created_at"`
+	UpdatedAt             time.Time `json:"updated_at"`
+}
+
+type Mensalidade struct {
+	ID             string     `json:"id"`
+	EmpresaID      string     `json:"empresa_id"`
+	AlunoID        string     `json:"aluno_id"`
+	AlunoNome      string     `json:"aluno_nome,omitempty"`
+	Valor          float64    `json:"valor"`
+	DataVencimento time.Time  `json:"data_vencimento"`
+	DataPagamento  *time.Time `json:"data_pagamento,omitempty"`
+	Status         string     `json:"status"`
+	Observacao     string     `json:"observacao,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
