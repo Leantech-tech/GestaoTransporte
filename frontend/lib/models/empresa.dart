@@ -35,4 +35,22 @@ class Empresa {
       'ativa': ativa,
     };
   }
+
+  Empresa copyWith({
+    String? id,
+    String? nome,
+    String? cnpj,
+    String? telefone,
+    String? endereco,
+    bool? ativa,
+  }) {
+    return Empresa(
+      id: id ?? this.id,
+      nome: nome ?? this.nome,
+      cnpj: cnpj ?? this.cnpj,
+      telefone: telefone ?? this.telefone,
+      endereco: endereco ?? this.endereco,
+      ativa: ativa ?? this.ativa,
+    );
+  }
 }

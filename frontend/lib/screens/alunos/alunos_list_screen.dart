@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/app_theme.dart';
+import '../../core/input_formatters.dart';
+import '../../core/scrollable_data_table.dart';
 import '../../core/section_card.dart';
 import '../../models/aluno.dart';
 import '../../models/escola.dart';
@@ -103,100 +105,87 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
                       Expanded(
                         child: _alunos.isEmpty
                             ? const Center(child: Text('Nenhum aluno cadastrado.'))
-                            : RefreshIndicator(
+                            : ScrollableDataTable(
+                                columnCount: 9,
                                 onRefresh: _carregar,
-                                child: LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    return SingleChildScrollView(
-                                      scrollDirection: Axis.vertical,
-                                      physics: const AlwaysScrollableScrollPhysics(),
-                                      child: SingleChildScrollView(
-                                        scrollDirection: Axis.horizontal,
-                                        child: ConstrainedBox(
-                                          constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                                          child: Card(
-                                            elevation: 0,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(12),
-                                              side: const BorderSide(color: Color(0xFFE5E7EB)),
-                                            ),
-                                            child: DataTable(
-                                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
-                                              columns: [
-                                                const DataColumn(label: Text('Nome do Aluno', style: TextStyle(fontWeight: FontWeight.bold))),
-                                                const DataColumn(label: Text('Endereço', style: TextStyle(fontWeight: FontWeight.bold))),
-                                                const DataColumn(label: Text('Mensalidade', style: TextStyle(fontWeight: FontWeight.bold))),
-                                                const DataColumn(label: Text('Valor', style: TextStyle(fontWeight: FontWeight.bold))),
-                                                const DataColumn(label: Text('Vencimento', style: TextStyle(fontWeight: FontWeight.bold))),
-                                                const DataColumn(label: Text('Responsável Financeiro', style: TextStyle(fontWeight: FontWeight.bold))),
-                                                const DataColumn(label: Text('Telefone Responsável', style: TextStyle(fontWeight: FontWeight.bold))),
-                                                const DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
-                                                if (!isSuporte)
-                                                  const DataColumn(label: Text('Ações', style: TextStyle(fontWeight: FontWeight.bold))),
+                                child: Card(
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: const BorderSide(color: Color(0xFFE5E7EB)),
+                                  ),
+                                  child: DataTable(
+                                    headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
+                                    columns: [
+                                      const DataColumn(label: Text('Nome do Aluno', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      const DataColumn(label: Text('Endereço', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      const DataColumn(label: Text('Mensalidade', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      const DataColumn(label: Text('Valor', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      const DataColumn(label: Text('Vencimento', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      const DataColumn(label: Text('Responsável Financeiro', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      const DataColumn(label: Text('Telefone Responsável', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      const DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      if (!isSuporte)
+                                        const DataColumn(label: Text('Ações', style: TextStyle(fontWeight: FontWeight.bold))),
+                                    ],
+                                    rows: _alunos.map((aluno) {
+                                      return DataRow(
+                                        cells: [
+                                          DataCell(
+                                            Row(
+                                              children: [
+                                                const Icon(Icons.person, size: 20, color: AppTheme.primary),
+                                                const SizedBox(width: 10),
+                                                Text(aluno.nome, style: const TextStyle(fontWeight: FontWeight.w600)),
                                               ],
-                                              rows: _alunos.map((aluno) {
-                                                return DataRow(
-                                                  cells: [
-                                                    DataCell(
-                                                      Row(
-                                                        children: [
-                                                          const Icon(Icons.person, size: 20, color: AppTheme.primary),
-                                                          const SizedBox(width: 10),
-                                                          Text(aluno.nome, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    DataCell(Text(aluno.endereco)),
-                                                    DataCell(Text(currency.format(aluno.mensalidade))),
-                                                    DataCell(Text(currency.format(aluno.valor))),
-                                                    DataCell(Text('Dia ${aluno.diaVencimento}')),
-                                                    DataCell(Text(aluno.responsavelNome)),
-                                                    DataCell(Text(aluno.responsavelTelefone)),
-                                                    DataCell(
-                                                      Container(
-                                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                                        decoration: BoxDecoration(
-                                                          color: aluno.ativo ? Colors.green.shade50 : Colors.orange.shade50,
-                                                          borderRadius: BorderRadius.circular(6),
-                                                          border: Border.all(color: aluno.ativo ? Colors.green.shade300 : Colors.orange.shade300),
-                                                        ),
-                                                        child: Text(
-                                                          aluno.ativo ? 'Ativo' : 'Inativo / Pendente',
-                                                          style: TextStyle(
-                                                            color: aluno.ativo ? Colors.green.shade700 : Colors.orange.shade800,
-                                                            fontSize: 12,
-                                                            fontWeight: FontWeight.bold,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    if (!isSuporte)
-                                                      DataCell(
-                                                        Row(
-                                                          mainAxisSize: MainAxisSize.min,
-                                                          children: [
-                                                            IconButton(
-                                                              icon: const Icon(Icons.edit_outlined, color: AppTheme.secondary),
-                                                              tooltip: 'Editar',
-                                                              onPressed: () => _abrirFormulario(context, aluno: aluno),
-                                                            ),
-                                                            IconButton(
-                                                              icon: const Icon(Icons.delete_outline, color: AppTheme.error),
-                                                              tooltip: 'Excluir',
-                                                              onPressed: () => _confirmarExclusao(context, aluno),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                  ],
-                                                );
-                                              }).toList(),
                                             ),
                                           ),
-                                        ),
-                                      ),
-                                    );
-                                  },
+                                          DataCell(Text(aluno.endereco)),
+                                          DataCell(Text(currency.format(aluno.mensalidade))),
+                                          DataCell(Text(currency.format(aluno.valor))),
+                                          DataCell(Text('Dia ${aluno.diaVencimento}')),
+                                          DataCell(Text(aluno.responsavelNome)),
+                                          DataCell(Text(aluno.responsavelTelefone)),
+                                          DataCell(
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: aluno.ativo ? Colors.green.shade50 : Colors.orange.shade50,
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(color: aluno.ativo ? Colors.green.shade300 : Colors.orange.shade300),
+                                              ),
+                                              child: Text(
+                                                aluno.ativo ? 'Ativo' : 'Inativo / Pendente',
+                                                style: TextStyle(
+                                                  color: aluno.ativo ? Colors.green.shade700 : Colors.orange.shade800,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          if (!isSuporte)
+                                            DataCell(
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  IconButton(
+                                                    icon: const Icon(Icons.edit_outlined, color: AppTheme.secondary),
+                                                    tooltip: 'Editar',
+                                                    onPressed: () => _abrirFormulario(context, aluno: aluno),
+                                                  ),
+                                                  IconButton(
+                                                    icon: const Icon(Icons.delete_outline, color: AppTheme.error),
+                                                    tooltip: 'Excluir',
+                                                    onPressed: () => _confirmarExclusao(context, aluno),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                        ],
+                                      );
+                                    }).toList(),
+                                  ),
                                 ),
                               ),
                       ),
@@ -282,16 +271,18 @@ class _AlunoFormScreenState extends State<AlunoFormScreen> {
     _nomeController = TextEditingController(text: aluno?.nome ?? '');
     _enderecoController = TextEditingController(text: aluno?.endereco ?? '');
     _mensalidadeController = TextEditingController(
-      text: aluno != null ? aluno.mensalidade.toStringAsFixed(2) : '',
+      text: aluno != null ? AppInputFormatters.moedaText(aluno.mensalidade) : '',
     );
     _valorController = TextEditingController(
-      text: aluno != null ? aluno.valor.toStringAsFixed(2) : '',
+      text: aluno != null ? AppInputFormatters.moedaText(aluno.valor) : '',
     );
     _diaVencimentoController = TextEditingController(
       text: aluno?.diaVencimento.toString() ?? '',
     );
     _responsavelController = TextEditingController(text: aluno?.responsavelNome ?? '');
-    _responsavelTelefoneController = TextEditingController(text: aluno?.responsavelTelefone ?? '');
+    _responsavelTelefoneController = TextEditingController(
+      text: aluno != null ? AppInputFormatters.formatTelefone(aluno.responsavelTelefone) : '',
+    );
     _escolaIdSelecionada = aluno?.escolaId;
     _ativo = aluno?.ativo ?? true;
     _carregarEscolas();
@@ -368,8 +359,8 @@ class _AlunoFormScreenState extends State<AlunoFormScreen> {
         escolaId: _escolaIdSelecionada!,
         nome: _nomeController.text.trim(),
         endereco: _enderecoController.text.trim(),
-        mensalidade: double.tryParse(_mensalidadeController.text.replaceAll(',', '.')) ?? 0,
-        valor: double.tryParse(_valorController.text.replaceAll(',', '.')) ?? 0,
+        mensalidade: AppInputFormatters.moedaDouble(_mensalidadeController.text),
+        valor: AppInputFormatters.moedaDouble(_valorController.text),
         diaVencimento: int.parse(_diaVencimentoController.text.trim()),
         responsavelNome: _responsavelController.text.trim(),
         responsavelTelefone: _responsavelTelefoneController.text.trim(),
@@ -486,11 +477,10 @@ class _AlunoFormScreenState extends State<AlunoFormScreen> {
                               decoration: const InputDecoration(
                                 labelText: 'Mensalidade',
                                 prefixIcon: Icon(Icons.attach_money),
+                                hintText: 'R\$ 0,00',
                               ),
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.allow(RegExp(r'[0-9,]')),
-                              ],
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [AppInputFormatters.moeda()],
                               validator: (value) =>
                                   value == null || value.trim().isEmpty ? 'Informe.' : null,
                             ),
@@ -502,11 +492,10 @@ class _AlunoFormScreenState extends State<AlunoFormScreen> {
                               decoration: const InputDecoration(
                                 labelText: 'Valor',
                                 prefixIcon: Icon(Icons.account_balance_wallet_outlined),
+                                hintText: 'R\$ 0,00',
                               ),
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.allow(RegExp(r'[0-9,]')),
-                              ],
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [AppInputFormatters.moeda()],
                               validator: (value) =>
                                   value == null || value.trim().isEmpty ? 'Informe.' : null,
                             ),
@@ -551,8 +540,10 @@ class _AlunoFormScreenState extends State<AlunoFormScreen> {
                         decoration: const InputDecoration(
                           labelText: 'Telefone do responsável',
                           prefixIcon: Icon(Icons.phone_outlined),
+                          hintText: '(00) 00000-0000',
                         ),
                         keyboardType: TextInputType.phone,
+                        inputFormatters: [AppInputFormatters.telefone()],
                         validator: (value) =>
                             value == null || value.trim().isEmpty ? 'Informe o telefone.' : null,
                       ),

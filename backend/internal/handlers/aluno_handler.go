@@ -58,7 +58,7 @@ func (h *AlunoHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	empresaID := claims.EmpresaID
-	if claims.Perfil == string(models.PerfilSuporte) {
+	if empresaID == "" {
 		empresaID = req.EmpresaID
 	}
 	if empresaID == "" {
@@ -98,10 +98,6 @@ func (h *AlunoHandler) Update(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "aluno não encontrado")
 		return
 	}
-	if claims.Perfil != string(models.PerfilSuporte) && existente.EmpresaID != claims.EmpresaID {
-		writeError(w, http.StatusForbidden, "sem permissão para editar este aluno")
-		return
-	}
 
 	var req AlunoRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -113,6 +109,26 @@ func (h *AlunoHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if claims.Perfil != string(models.PerfilSuporte) {
+		if claims.EmpresaID != "" && existente.EmpresaID != claims.EmpresaID {
+			writeError(w, http.StatusForbidden, "sem permissão para editar este aluno")
+			return
+		}
+		if claims.EmpresaID == "" && req.EmpresaID != "" && req.EmpresaID != existente.EmpresaID {
+			writeError(w, http.StatusForbidden, "sem permissão para alterar a empresa deste aluno")
+			return
+		}
+	}
+
+	empresaID := existente.EmpresaID
+	if req.EmpresaID != "" {
+		empresaID = req.EmpresaID
+	}
+	if claims.EmpresaID != "" {
+		empresaID = claims.EmpresaID
+	}
+
+	existente.EmpresaID = empresaID
 	existente.EscolaID = req.EscolaID
 	existente.Nome = req.Nome
 	existente.Endereco = req.Endereco

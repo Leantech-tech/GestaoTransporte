@@ -5,12 +5,15 @@ import 'package:provider/provider.dart';
 import '../core/app_theme.dart';
 import '../models/aluno.dart';
 import '../models/escola.dart';
+import '../models/usuario.dart';
 import '../providers/auth_provider.dart';
 import 'alunos/alunos_list_screen.dart';
 import 'escolas/escolas_list_screen.dart';
 import 'financeiro/financeiro_hub_screen.dart';
 import 'financeiro/gerar_mensalidade_screen.dart';
 import 'financeiro/receber_mensalidade_screen.dart';
+import 'empresas/empresas_list_screen.dart';
+import 'usuarios/usuarios_list_screen.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -87,6 +90,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // 3 = Financeiro Hub (mobile)
   // 4 = Gerar Mensalidade
   // 5 = Receber Mensalidade
+  // 6 = Admin Hub (mobile)
+  // 7 = Empresas
+  // 8 = Usuários
 
   String get _tituloAppBar {
     switch (_selectedIndex) {
@@ -97,11 +103,16 @@ class _HomeScreenState extends State<HomeScreen> {
       case 2:
         return 'Gestão de Alunos';
       case 3:
-        return 'Financeiro';
+      case 6:
+        return 'Administração';
       case 4:
         return 'Gerar Mensalidade';
       case 5:
         return 'Receber Mensalidade';
+      case 7:
+        return 'Gestão de Empresas';
+      case 8:
+        return 'Gestão de Usuários';
       default:
         return '';
     }
@@ -117,7 +128,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return null;
   }
 
-  int get _bottomNavIndex => _selectedIndex <= 3 ? _selectedIndex : 3;
+  int get _bottomNavIndex {
+    if (_selectedIndex <= 3) return _selectedIndex;
+    if (_selectedIndex == 4 || _selectedIndex == 5) return 3;
+    if (_selectedIndex == 6 || _selectedIndex == 7 || _selectedIndex == 8) return 4;
+    return 0;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -133,6 +149,12 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       const GerarMensalidadeScreen(),
       const ReceberMensalidadeScreen(),
+      _AdminHubScreen(
+        onEmpresas: () => setState(() => _selectedIndex = 7),
+        onUsuarios: () => setState(() => _selectedIndex = 8),
+      ),
+      const EmpresasListScreen(),
+      const UsuariosListScreen(),
     ];
 
     if (isWide) {
@@ -184,7 +206,13 @@ class _HomeScreenState extends State<HomeScreen> {
           backgroundColor: Colors.white,
           indicatorColor: AppTheme.primary.withValues(alpha: 0.12),
           onDestinationSelected: (int index) {
-            setState(() => _selectedIndex = index);
+            if (index == 3) {
+              setState(() => _selectedIndex = 3);
+            } else if (index == 4) {
+              setState(() => _selectedIndex = 6);
+            } else {
+              setState(() => _selectedIndex = index);
+            }
           },
           destinations: const [
             NavigationDestination(
@@ -206,6 +234,11 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icon(Icons.account_balance_wallet_outlined),
               selectedIcon: Icon(Icons.account_balance_wallet_rounded, color: AppTheme.primary),
               label: 'Financeiro',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.admin_panel_settings_outlined),
+              selectedIcon: Icon(Icons.admin_panel_settings_rounded, color: AppTheme.primary),
+              label: 'Admin',
             ),
           ],
         ),
@@ -450,6 +483,72 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 // ==========================================
+// ADMIN HUB (mobile)
+// ==========================================
+
+class _AdminHubScreen extends StatelessWidget {
+  final VoidCallback onEmpresas;
+  final VoidCallback onUsuarios;
+
+  const _AdminHubScreen({required this.onEmpresas, required this.onUsuarios});
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final isAdmin = (auth.usuario?.isSuporte ?? false) || auth.usuario?.perfil == Perfil.admin;
+
+    if (!isAdmin) {
+      return const Center(child: Text('Acesso restrito a administradores.'));
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Administração',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Gerencie empresas e usuários do sistema',
+            style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+          ),
+          const SizedBox(height: 32),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Color(0xFFE5E7EB)),
+            ),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.business, color: AppTheme.primary),
+                  title: const Text('Empresas', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Transportadoras escolares cadastradas'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: onEmpresas,
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.people, color: AppTheme.primary),
+                  title: const Text('Usuários', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Acessos e vínculos com empresas'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: onUsuarios,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==========================================
 // COMPONENTES DE NAVEGAÇÃO E SIDEBAR ELEGANTE
 // ==========================================
 
@@ -564,6 +663,7 @@ class _CustomSidebar extends StatelessWidget {
             label: 'Financeiro',
             isExpanded: financeiroSelecionado,
             isSelected: financeiroSelecionado,
+            onTap: () => onDestinationSelected(4),
             children: [
               _SidebarSubItem(
                 label: 'Gerar mensalidade',
@@ -576,6 +676,33 @@ class _CustomSidebar extends StatelessWidget {
                 onTap: () => onDestinationSelected(5),
               ),
             ],
+          ),
+          Builder(
+            builder: (context) {
+              final auth = context.watch<AuthProvider>();
+              final isAdmin = (auth.usuario?.isSuporte ?? false) || auth.usuario?.perfil == Perfil.admin;
+              if (!isAdmin) return const SizedBox.shrink();
+              final adminSelecionado = selectedIndex == 7 || selectedIndex == 8;
+              return _ExpandableSidebarItem(
+                icon: Icons.admin_panel_settings_rounded,
+                label: 'Administração',
+                isExpanded: adminSelecionado,
+                isSelected: adminSelecionado,
+                onTap: () => onDestinationSelected(7),
+                children: [
+                  _SidebarSubItem(
+                    label: 'Empresas',
+                    isSelected: selectedIndex == 7,
+                    onTap: () => onDestinationSelected(7),
+                  ),
+                  _SidebarSubItem(
+                    label: 'Usuários',
+                    isSelected: selectedIndex == 8,
+                    onTap: () => onDestinationSelected(8),
+                  ),
+                ],
+              );
+            },
           ),
 
           const Spacer(),
@@ -639,6 +766,8 @@ class _SidebarItem extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
+          highlightColor: Colors.transparent,
+          splashColor: Colors.transparent,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -724,6 +853,148 @@ class _TopNavbar extends StatelessWidget {
             onPressed: onLogout,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ExpandableSidebarItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isExpanded;
+  final bool isSelected;
+  final VoidCallback? onTap;
+  final List<Widget> children;
+
+  const _ExpandableSidebarItem({
+    required this.icon,
+    required this.label,
+    required this.isExpanded,
+    required this.isSelected,
+    this.onTap,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(12),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isSelected ? const Color(0xFF3282B8) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      icon,
+                      color: isSelected ? Colors.white : Colors.white60,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.white70,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    AnimatedRotation(
+                      turns: isExpanded ? 0.25 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(
+                        Icons.chevron_right,
+                        color: isSelected ? Colors.white70 : Colors.white38,
+                        size: 18,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: children,
+            ),
+            crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 200),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SidebarSubItem extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _SidebarSubItem({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 28),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          highlightColor: Colors.transparent,
+          splashColor: Colors.transparent,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: isSelected ? const Color(0xFF3282B8) : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.white : Colors.white38,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : Colors.white60,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

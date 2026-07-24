@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/app_theme.dart';
+import '../../core/scrollable_data_table.dart';
 import '../../core/section_card.dart';
 import '../../models/escola.dart';
 import '../../providers/auth_provider.dart';
@@ -98,81 +99,76 @@ class _EscolasListScreenState extends State<EscolasListScreen> {
                       Expanded(
                         child: _escolas.isEmpty
                             ? const Center(child: Text('Nenhuma escola cadastrada.'))
-                            : RefreshIndicator(
+                            : ScrollableDataTable(
+                                columnCount: 4,
                                 onRefresh: _carregar,
-                                child: SingleChildScrollView(
-                                  physics: const AlwaysScrollableScrollPhysics(),
-                                  child: SizedBox(
-                                    width: double.infinity,
-                                    child: Card(
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        side: const BorderSide(color: Color(0xFFE5E7EB)),
-                                      ),
-                                      child: DataTable(
-                                        headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
-                                        columns: [
-                                          const DataColumn(label: Text('Nome da Escola', style: TextStyle(fontWeight: FontWeight.bold))),
-                                          const DataColumn(label: Text('Endereço Completo', style: TextStyle(fontWeight: FontWeight.bold))),
-                                          const DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+                                child: Card(
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: const BorderSide(color: Color(0xFFE5E7EB)),
+                                  ),
+                                  child: DataTable(
+                                    headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
+                                    columns: [
+                                      const DataColumn(label: Text('Nome da Escola', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      const DataColumn(label: Text('Endereço Completo', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      const DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      if (!isSuporte)
+                                        const DataColumn(label: Text('Ações', style: TextStyle(fontWeight: FontWeight.bold))),
+                                    ],
+                                    rows: _escolas.map((escola) {
+                                      return DataRow(
+                                        cells: [
+                                          DataCell(
+                                            Row(
+                                              children: [
+                                                const Icon(Icons.school, size: 20, color: AppTheme.primary),
+                                                const SizedBox(width: 10),
+                                                Text(escola.nome, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                              ],
+                                            ),
+                                          ),
+                                          DataCell(Text(escola.enderecoCompleto)),
+                                          DataCell(
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: escola.ativa ? Colors.green.shade50 : Colors.red.shade50,
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(color: escola.ativa ? Colors.green.shade300 : Colors.red.shade300),
+                                              ),
+                                              child: Text(
+                                                escola.ativa ? 'Ativa' : 'Inativa',
+                                                style: TextStyle(
+                                                  color: escola.ativa ? Colors.green.shade700 : Colors.red.shade700,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
                                           if (!isSuporte)
-                                            const DataColumn(label: Text('Ações', style: TextStyle(fontWeight: FontWeight.bold))),
+                                            DataCell(
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  IconButton(
+                                                    icon: const Icon(Icons.edit_outlined, color: AppTheme.secondary),
+                                                    tooltip: 'Editar',
+                                                    onPressed: () => _abrirFormulario(context, escola: escola),
+                                                  ),
+                                                  IconButton(
+                                                    icon: const Icon(Icons.delete_outline, color: AppTheme.error),
+                                                    tooltip: 'Excluir',
+                                                    onPressed: () => _confirmarExclusao(context, escola),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
                                         ],
-                                        rows: _escolas.map((escola) {
-                                          return DataRow(
-                                            cells: [
-                                              DataCell(
-                                                Row(
-                                                  children: [
-                                                    const Icon(Icons.school, size: 20, color: AppTheme.primary),
-                                                    const SizedBox(width: 10),
-                                                    Text(escola.nome, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                                  ],
-                                                ),
-                                              ),
-                                              DataCell(Text(escola.enderecoCompleto)),
-                                              DataCell(
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                                  decoration: BoxDecoration(
-                                                    color: escola.ativa ? Colors.green.shade50 : Colors.red.shade50,
-                                                    borderRadius: BorderRadius.circular(6),
-                                                    border: Border.all(color: escola.ativa ? Colors.green.shade300 : Colors.red.shade300),
-                                                  ),
-                                                  child: Text(
-                                                    escola.ativa ? 'Ativa' : 'Inativa',
-                                                    style: TextStyle(
-                                                      color: escola.ativa ? Colors.green.shade700 : Colors.red.shade700,
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                              if (!isSuporte)
-                                                DataCell(
-                                                  Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      IconButton(
-                                                        icon: const Icon(Icons.edit_outlined, color: AppTheme.secondary),
-                                                        tooltip: 'Editar',
-                                                        onPressed: () => _abrirFormulario(context, escola: escola),
-                                                      ),
-                                                      IconButton(
-                                                        icon: const Icon(Icons.delete_outline, color: AppTheme.error),
-                                                        tooltip: 'Excluir',
-                                                        onPressed: () => _confirmarExclusao(context, escola),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                            ],
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ),
+                                      );
+                                    }).toList(),
                                   ),
                                 ),
                               ),
@@ -266,7 +262,9 @@ class _EscolaFormScreenState extends State<EscolaFormScreen> {
 
     if (empresaId == null || empresaId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Usuário sem empresa vinculada.')),
+        const SnackBar(
+          content: Text('Usuário sem empresa vinculada. Vá em Administração > Usuários para vincular uma empresa.'),
+        ),
       );
       return;
     }

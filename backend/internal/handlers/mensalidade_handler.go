@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -32,9 +34,10 @@ type MensalidadeRequest struct {
 }
 
 type GerarMensalidadesRequest struct {
-	AlunoID    string `json:"aluno_id,omitempty"`
-	Quantidade int    `json:"quantidade"`
-	GerarTodos bool   `json:"gerar_todos"`
+	AlunoID      string  `json:"aluno_id,omitempty"`
+	Quantidade   int     `json:"quantidade"`
+	GerarTodos   bool    `json:"gerar_todos"`
+	DataEmissao  *string `json:"data_emissao,omitempty"`
 }
 
 type GerarMensalidadesResponse struct {
@@ -164,12 +167,27 @@ func (h *MensalidadeHandler) BulkGenerate(w http.ResponseWriter, r *http.Request
 	}
 
 	geradas := 0
-	now := time.Now().UTC()
-	currentYear, currentMonth, _ := now.Date()
+	dataEmissao := time.Now().UTC()
+	if req.DataEmissao != nil {
+		d, err := parseDate(*req.DataEmissao)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "data de emissão inválida")
+			return
+		}
+		dataEmissao = d
+	}
+	currentYear, currentMonth, currentDay := dataEmissao.Date()
 
 	for _, aluno := range alunos {
+		// Se a emissão ocorreu antes ou no dia do vencimento, a primeira mensalidade é no mês atual.
+		// Se a emissão ocorreu depois do dia do vencimento, a primeira mensalidade é no mês seguinte.
+		mesesAdicionais := 0
+		if currentDay > aluno.DiaVencimento {
+			mesesAdicionais = 1
+		}
+
 		for i := 0; i < req.Quantidade; i++ {
-			totalMonths := int(currentMonth) + 1 + i
+			totalMonths := int(currentMonth) + mesesAdicionais + i
 			year := currentYear + (totalMonths-1)/12
 			month := time.Month((totalMonths-1)%12 + 1)
 			day := aluno.DiaVencimento
@@ -182,7 +200,9 @@ func (h *MensalidadeHandler) BulkGenerate(w http.ResponseWriter, r *http.Request
 
 			existente, err := h.mensalidadeRepo.FindByAlunoMes(aluno.ID, dataVencimento)
 			if err != nil {
-				writeError(w, http.StatusInternalServerError, "erro ao verificar mensalidade existente")
+				msg := fmt.Sprintf("erro ao verificar mensalidade existente: %v", err)
+				log.Printf("%s (aluno=%s data=%v)", msg, aluno.ID, dataVencimento)
+				writeError(w, http.StatusInternalServerError, msg)
 				return
 			}
 			if existente != nil {
@@ -197,7 +217,9 @@ func (h *MensalidadeHandler) BulkGenerate(w http.ResponseWriter, r *http.Request
 				Status:         "pendente",
 			}
 			if err := h.mensalidadeRepo.Create(m); err != nil {
-				writeError(w, http.StatusInternalServerError, "erro ao gerar mensalidade")
+				msg := fmt.Sprintf("erro ao gerar mensalidade: %v", err)
+				log.Printf("%s (aluno=%s data=%v)", msg, aluno.ID, dataVencimento)
+				writeError(w, http.StatusInternalServerError, msg)
 				return
 			}
 			geradas++

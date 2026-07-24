@@ -33,7 +33,7 @@ func (r *EscolaRepository) List(empresaID string) ([]models.Escola, error) {
 	}
 	defer rows.Close()
 
-	var escolas []models.Escola
+	escolas := make([]models.Escola, 0)
 	for rows.Next() {
 		var e models.Escola
 		if err := rows.Scan(&e.ID, &e.EmpresaID, &e.Nome, &e.EnderecoCompleto, &e.Ativa, &e.CreatedAt, &e.UpdatedAt); err != nil {

@@ -42,7 +42,26 @@ class Usuario {
       'nome': nome,
       'email': email,
       'perfil': perfil.name,
+      'ativo': ativo,
       if (empresaId != null) 'empresa_id': empresaId,
     };
+  }
+
+  Usuario copyWith({
+    String? id,
+    String? empresaId,
+    String? nome,
+    String? email,
+    Perfil? perfil,
+    bool? ativo,
+  }) {
+    return Usuario(
+      id: id ?? this.id,
+      empresaId: empresaId ?? this.empresaId,
+      nome: nome ?? this.nome,
+      email: email ?? this.email,
+      perfil: perfil ?? this.perfil,
+      ativo: ativo ?? this.ativo,
+    );
   }
 }

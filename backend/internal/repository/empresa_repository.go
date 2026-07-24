@@ -24,7 +24,7 @@ func (r *EmpresaRepository) ListAll() ([]models.Empresa, error) {
 	}
 	defer rows.Close()
 
-	var empresas []models.Empresa
+	empresas := make([]models.Empresa, 0)
 	for rows.Next() {
 		var e models.Empresa
 		if err := rows.Scan(&e.ID, &e.Nome, &e.CNPJ, &e.Telefone, &e.Endereco, &e.Ativa, &e.CreatedAt, &e.UpdatedAt); err != nil {
@@ -46,4 +46,25 @@ func (r *EmpresaRepository) FindByID(id string) (*models.Empresa, error) {
 		return nil, nil
 	}
 	return &e, err
+}
+
+func (r *EmpresaRepository) Create(e *models.Empresa) error {
+	return r.db.QueryRow(`
+		INSERT INTO empresas (nome, cnpj, telefone, endereco, ativa)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, created_at, updated_at
+	`, e.Nome, e.CNPJ, e.Telefone, e.Endereco, e.Ativa).Scan(&e.ID, &e.CreatedAt, &e.UpdatedAt)
+}
+
+func (r *EmpresaRepository) Update(e *models.Empresa) error {
+	_, err := r.db.Exec(`
+		UPDATE empresas SET nome = $1, cnpj = $2, telefone = $3, endereco = $4, ativa = $5
+		WHERE id = $6
+	`, e.Nome, e.CNPJ, e.Telefone, e.Endereco, e.Ativa, e.ID)
+	return err
+}
+
+func (r *EmpresaRepository) Delete(id string) error {
+	_, err := r.db.Exec(`DELETE FROM empresas WHERE id = $1`, id)
+	return err
 }

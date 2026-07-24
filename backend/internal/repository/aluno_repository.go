@@ -35,7 +35,7 @@ func (r *AlunoRepository) List(empresaID string) ([]models.Aluno, error) {
 	}
 	defer rows.Close()
 
-	var alunos []models.Aluno
+	alunos := make([]models.Aluno, 0)
 	for rows.Next() {
 		var a models.Aluno
 		if err := rows.Scan(&a.ID, &a.EmpresaID, &a.EscolaID, &a.Nome, &a.Endereco,

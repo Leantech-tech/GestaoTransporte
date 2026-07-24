@@ -36,7 +36,7 @@ func (r *MensalidadeRepository) List(empresaID string) ([]models.Mensalidade, er
 	}
 	defer rows.Close()
 
-	var mensalidades []models.Mensalidade
+	mensalidades := make([]models.Mensalidade, 0)
 	for rows.Next() {
 		var m models.Mensalidade
 		var dataPagamento sql.NullTime
@@ -85,7 +85,7 @@ func (r *MensalidadeRepository) FindByAlunoMes(alunoID string, dataVencimento ti
 		SELECT id, empresa_id, aluno_id, valor, data_vencimento, data_pagamento,
 		       status, observacao, created_at, updated_at
 		FROM mensalidades
-		WHERE aluno_id = $1 AND data_vencimento = $2
+		WHERE aluno_id = $1 AND data_vencimento::date = $2::date
 	`, alunoID, dataVencimento)
 
 	var m models.Mensalidade

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/app_theme.dart';
@@ -17,6 +18,7 @@ class GerarMensalidadeScreen extends StatefulWidget {
 class _GerarMensalidadeScreenState extends State<GerarMensalidadeScreen> {
   final _formKey = GlobalKey<FormState>();
   final _quantidadeController = TextEditingController(text: '1');
+  final _dateFormat = DateFormat('dd/MM/yyyy');
 
   List<Aluno> _alunos = [];
   String? _alunoIdSelecionado;
@@ -25,6 +27,7 @@ class _GerarMensalidadeScreenState extends State<GerarMensalidadeScreen> {
   bool _gerando = false;
   String? _erro;
   int? _geradas;
+  DateTime? _dataEmissao;
 
   @override
   void initState() {
@@ -48,13 +51,22 @@ class _GerarMensalidadeScreenState extends State<GerarMensalidadeScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _quantidadeController.dispose();
-    super.dispose();
+  Future<void> _mostrarDataEmissao() async {
+    final data = await showDatePicker(
+      context: context,
+      initialDate: _dataEmissao ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      helpText: 'Selecione a data de emissão',
+      cancelText: 'Cancelar',
+      confirmText: 'Confirmar',
+    );
+
+    if (data == null || !mounted) return;
+    setState(() => _dataEmissao = data);
   }
 
-  Future<void> _gerar() async {
+  Future<void> _iniciarGeracao() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (!_gerarTodos && _alunoIdSelecionado == null) {
@@ -64,6 +76,13 @@ class _GerarMensalidadeScreenState extends State<GerarMensalidadeScreen> {
       return;
     }
 
+    await _mostrarDataEmissao();
+    if (_dataEmissao == null) return;
+
+    await _executarGerar();
+  }
+
+  Future<void> _executarGerar() async {
     setState(() => _gerando = true);
     try {
       final quantidade = int.parse(_quantidadeController.text.trim());
@@ -71,6 +90,7 @@ class _GerarMensalidadeScreenState extends State<GerarMensalidadeScreen> {
         alunoId: _alunoIdSelecionado,
         quantidade: quantidade,
         gerarTodos: _gerarTodos,
+        dataEmissao: _dataEmissao,
       );
       setState(() => _geradas = geradas);
       if (mounted) {
@@ -119,16 +139,39 @@ class _GerarMensalidadeScreenState extends State<GerarMensalidadeScreen> {
                       ),
                     ),
                   SectionCard(
+                    title: 'Data de Emissão',
+                    icon: Icons.calendar_today_outlined,
+                    children: [
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Data de emissão'),
+                        subtitle: Text(
+                          _dataEmissao != null
+                              ? _dateFormat.format(_dataEmissao!)
+                              : 'Será solicitada ao clicar em "Gerar mensalidades"',
+                          style: const TextStyle(color: AppTheme.textSecondary),
+                        ),
+                        trailing: _dataEmissao != null
+                            ? IconButton(
+                                icon: const Icon(Icons.edit_calendar_outlined),
+                                onPressed: _mostrarDataEmissao,
+                              )
+                            : null,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SectionCard(
                     title: 'Configuração da Geração',
                     icon: Icons.settings_outlined,
                     children: [
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('Gerar para todos os alunos ativos'),
+                        title: const Text('Gerar mensalidade para todos os alunos ativos?'),
                         subtitle: Text(
                           _gerarTodos
-                              ? 'Serão geradas mensalidades para todos os alunos ativos.'
-                              : 'Será gerada mensalidade apenas para o aluno selecionado.',
+                              ? 'Sim: serão geradas mensalidades para todos os alunos ativos.'
+                              : 'Não: será gerada mensalidade apenas para o aluno selecionado.',
                           style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                         ),
                         value: _gerarTodos,
@@ -138,7 +181,7 @@ class _GerarMensalidadeScreenState extends State<GerarMensalidadeScreen> {
                       if (!_gerarTodos) ...[
                         const SizedBox(height: 20),
                         DropdownButtonFormField<String>(
-                          value: _alunoIdSelecionado,
+                          initialValue: _alunoIdSelecionado,
                           decoration: const InputDecoration(
                             labelText: 'Aluno',
                             prefixIcon: Icon(Icons.person_outline),
@@ -183,14 +226,14 @@ class _GerarMensalidadeScreenState extends State<GerarMensalidadeScreen> {
                     icon: Icons.info_outline,
                     children: [
                       Text(
-                        'As mensalidades serão geradas a partir do mês seguinte, respeitando o dia de vencimento configurado no cadastro de cada aluno. Mensalidades já existentes para o mesmo mês/aluno serão ignoradas.',
+                        'As mensalidades serão geradas a partir do mês seguinte à data de emissão, respeitando o dia de vencimento configurado no cadastro de cada aluno. Mensalidades já existentes para o mesmo mês/aluno serão ignoradas.',
                         style: TextStyle(fontSize: 14, color: AppTheme.textSecondary.withValues(alpha: 0.9)),
                       ),
                     ],
                   ),
                   const SizedBox(height: 32),
                   ElevatedButton(
-                    onPressed: _gerando ? null : _gerar,
+                    onPressed: _gerando ? null : _iniciarGeracao,
                     child: _gerando
                         ? const SizedBox(
                             width: 20,

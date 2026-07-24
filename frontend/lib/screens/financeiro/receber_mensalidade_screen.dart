@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/app_theme.dart';
+import '../../core/input_formatters.dart';
 import '../../models/aluno.dart';
 import '../../models/mensalidade.dart';
 import '../../services/api_data_service.dart';
@@ -20,15 +20,24 @@ class _ReceberMensalidadeScreenState extends State<ReceberMensalidadeScreen> {
   List<Mensalidade> _mensalidades = [];
   List<Aluno> _alunos = [];
   String? _erro;
-  String _filtroStatus = 'todos';
+
+  String _filtroAluno = '';
+  DateTime? _filtroDataVencimento;
 
   final _dateFormat = DateFormat('dd/MM/yyyy');
   final _currency = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+  final _filtroDataController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _carregar();
+  }
+
+  @override
+  void dispose() {
+    _filtroDataController.dispose();
+    super.dispose();
   }
 
   Future<void> _carregar() async {
@@ -38,7 +47,7 @@ class _ReceberMensalidadeScreenState extends State<ReceberMensalidadeScreen> {
       final mensalidades = await service.listarMensalidades();
       final alunos = await service.listarAlunos();
       setState(() {
-        _mensalidades = mensalidades;
+        _mensalidades = mensalidades.where((m) => m.status != 'pago').toList();
         _alunos = alunos;
         _erro = null;
       });
@@ -50,134 +59,180 @@ class _ReceberMensalidadeScreenState extends State<ReceberMensalidadeScreen> {
   }
 
   List<Mensalidade> get _mensalidadesFiltradas {
-    if (_filtroStatus == 'todos') return _mensalidades;
-    return _mensalidades.where((m) => m.status == _filtroStatus).toList();
+    return _mensalidades.where((m) {
+      final matchAluno = _filtroAluno.isEmpty ||
+          _nomeAluno(m).toLowerCase().contains(_filtroAluno.toLowerCase());
+      final matchData = _filtroDataVencimento == null ||
+          _mesmaData(m.dataVencimento, _filtroDataVencimento!);
+      return matchAluno && matchData;
+    }).toList();
   }
 
-  String _nomeAluno(String alunoId) {
-    final aluno = _alunos.where((a) => a.id == alunoId).firstOrNull;
+  bool _mesmaData(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  String _nomeAluno(Mensalidade mensalidade) {
+    final aluno = _alunos.where((a) => a.id == mensalidade.alunoId).firstOrNull;
     return aluno?.nome ?? mensalidade.alunoNome ?? 'Aluno não encontrado';
   }
 
-  Color _corStatus(String status) {
-    switch (status) {
-      case 'pago':
-        return Colors.green;
-      case 'cancelado':
-        return Colors.red;
-      case 'pendente':
-      default:
-        return Colors.orange;
-    }
-  }
-
-  String _labelStatus(String status) {
-    switch (status) {
-      case 'pago':
-        return 'Pago';
-      case 'cancelado':
-        return 'Cancelado';
-      case 'pendente':
-      default:
-        return 'Pendente';
-    }
-  }
-
-  Future<void> _receber(Mensalidade mensalidade) async {
-    final dataPagamento = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (dataPagamento == null) return;
-
+  Future<void> _marcarComoPago(Mensalidade mensalidade) async {
+    final service = context.read<ApiDataService>();
     final atualizada = mensalidade.copyWith(
       status: 'pago',
-      dataPagamento: dataPagamento,
+      dataPagamento: DateTime.now(),
     );
 
     try {
-      await context.read<ApiDataService>().salvarMensalidade(atualizada);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Mensalidade recebida com sucesso.')),
-        );
-      }
+      await service.salvarMensalidade(atualizada);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Mensalidade recebida com sucesso.')),
+      );
       _carregar();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao receber: $e')),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao receber mensalidade: $e')),
+      );
     }
   }
 
-  void _editar(Mensalidade mensalidade) {
-    showDialog(
-      context: context,
-      builder: (_) => _EditarMensalidadeDialog(
-        mensalidade: mensalidade,
-        alunos: _alunos,
-        onSalvar: (atualizada) async {
-          try {
-            await context.read<ApiDataService>().salvarMensalidade(atualizada);
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Mensalidade atualizada.')),
-              );
-            }
-            _carregar();
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Erro ao atualizar: $e')),
-              );
-            }
-          }
-        },
-      ),
-    );
-  }
+  Future<void> _editarMensalidade(BuildContext context, Mensalidade mensalidade) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final service = context.read<ApiDataService>();
+    final valorController = TextEditingController(text: AppInputFormatters.moedaText(mensalidade.valor));
+    DateTime? dataVencimento = mensalidade.dataVencimento;
+    final dataController = TextEditingController(text: _dateFormat.format(dataVencimento));
 
-  Future<void> _excluir(Mensalidade mensalidade) async {
-    final confirmar = await showDialog<bool>(
+    final confirmado = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Excluir mensalidade?'),
-        content: const Text('Deseja realmente excluir esta mensalidade?'),
+      builder: (context) => AlertDialog(
+        title: const Text('Editar mensalidade'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: valorController,
+              decoration: const InputDecoration(
+                labelText: 'Valor',
+                prefixIcon: Icon(Icons.attach_money),
+                hintText: 'R\$ 0,00',
+              ),
+              keyboardType: TextInputType.number,
+              inputFormatters: [AppInputFormatters.moeda()],
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: dataController,
+              readOnly: true,
+              decoration: const InputDecoration(
+                labelText: 'Data de vencimento',
+                prefixIcon: Icon(Icons.calendar_today_outlined),
+              ),
+              onTap: () async {
+                final data = await showDatePicker(
+                  context: context,
+                  initialDate: dataVencimento,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2100),
+                );
+                if (data != null) {
+                  dataVencimento = data;
+                  dataController.text = _dateFormat.format(data);
+                }
+              },
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Excluir'),
+            child: const Text('Salvar'),
           ),
         ],
       ),
     );
 
-    if (confirmar != true) return;
+    if (confirmado != true || !mounted) return;
 
     try {
-      await context.read<ApiDataService>().removerMensalidade(mensalidade.id);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Mensalidade excluída.')),
-        );
-      }
+      final valor = AppInputFormatters.moedaDouble(valorController.text);
+
+      final atualizada = mensalidade.copyWith(
+        valor: valor,
+        dataVencimento: dataVencimento,
+      );
+      await service.salvarMensalidade(atualizada);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Mensalidade atualizada.')),
+      );
       _carregar();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao excluir: $e')),
-        );
-      }
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erro ao atualizar: $e')),
+      );
     }
+  }
+
+  void _confirmarExclusao(BuildContext context, Mensalidade mensalidade) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Excluir mensalidade?'),
+        content: Text('Deseja realmente excluir a mensalidade de "${_nomeAluno(mensalidade)}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                await context.read<ApiDataService>().removerMensalidade(mensalidade.id);
+                navigator.pop();
+                _carregar();
+              } catch (e) {
+                navigator.pop();
+                messenger.showSnackBar(
+                  SnackBar(content: Text('Erro ao excluir: $e')),
+                );
+              }
+            },
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _selecionarDataFiltro() async {
+    final data = await showDatePicker(
+      context: context,
+      initialDate: _filtroDataVencimento ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (data == null) return;
+    setState(() {
+      _filtroDataVencimento = data;
+      _filtroDataController.text = _dateFormat.format(data);
+    });
+  }
+
+  void _limparFiltroData() {
+    setState(() {
+      _filtroDataVencimento = null;
+      _filtroDataController.clear();
+    });
   }
 
   @override
@@ -197,126 +252,24 @@ class _ReceberMensalidadeScreenState extends State<ReceberMensalidadeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Mensalidades',
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppTheme.textPrimary,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Acompanhe e receba as mensalidades geradas',
-                                  style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
-                                ),
-                              ],
-                            ),
-                            SegmentedButton<String>(
-                              segments: const [
-                                ButtonSegment(value: 'todos', label: Text('Todos')),
-                                ButtonSegment(value: 'pendente', label: Text('Pendentes')),
-                                ButtonSegment(value: 'pago', label: Text('Pagos')),
-                                ButtonSegment(value: 'cancelado', label: Text('Cancelados')),
-                              ],
-                              selected: {_filtroStatus},
-                              onSelectionChanged: (selected) {
-                                setState(() => _filtroStatus = selected.first);
-                              },
-                            ),
-                          ],
+                        const Text(
+                          'Mensalidades',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Filtre por aluno e/ou data de vencimento. Marque o switch para confirmar o pagamento.',
+                          style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
                         ),
                         const SizedBox(height: 24),
+                        _buildFiltros(),
+                        const SizedBox(height: 24),
                         Expanded(
-                          child: _mensalidadesFiltradas.isEmpty
-                              ? const Center(child: Text('Nenhuma mensalidade encontrada.'))
-                              : LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    return SingleChildScrollView(
-                                      scrollDirection: Axis.vertical,
-                                      physics: const AlwaysScrollableScrollPhysics(),
-                                      child: SingleChildScrollView(
-                                        scrollDirection: Axis.horizontal,
-                                        child: ConstrainedBox(
-                                          constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                                          child: Card(
-                                            elevation: 0,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(12),
-                                              side: const BorderSide(color: Color(0xFFE5E7EB)),
-                                            ),
-                                            child: DataTable(
-                                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
-                                              columns: const [
-                                                DataColumn(label: Text('Aluno', style: TextStyle(fontWeight: FontWeight.bold))),
-                                                DataColumn(label: Text('Vencimento', style: TextStyle(fontWeight: FontWeight.bold))),
-                                                DataColumn(label: Text('Valor', style: TextStyle(fontWeight: FontWeight.bold))),
-                                                DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
-                                                DataColumn(label: Text('Ações', style: TextStyle(fontWeight: FontWeight.bold))),
-                                              ],
-                                              rows: _mensalidadesFiltradas.map((mensalidade) {
-                                                return DataRow(
-                                                  cells: [
-                                                    DataCell(Text(_nomeAluno(mensalidade.alunoId))),
-                                                    DataCell(Text(_dateFormat.format(mensalidade.dataVencimento))),
-                                                    DataCell(Text(_currency.format(mensalidade.valor))),
-                                                    DataCell(
-                                                      Container(
-                                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                                        decoration: BoxDecoration(
-                                                          color: _corStatus(mensalidade.status).shade50,
-                                                          borderRadius: BorderRadius.circular(6),
-                                                          border: Border.all(color: _corStatus(mensalidade.status).shade300),
-                                                        ),
-                                                        child: Text(
-                                                          _labelStatus(mensalidade.status),
-                                                          style: TextStyle(
-                                                            color: _corStatus(mensalidade.status).shade700,
-                                                            fontSize: 12,
-                                                            fontWeight: FontWeight.bold,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    DataCell(
-                                                      Row(
-                                                        mainAxisSize: MainAxisSize.min,
-                                                        children: [
-                                                          if (mensalidade.status == 'pendente')
-                                                            IconButton(
-                                                              icon: const Icon(Icons.payments, color: AppTheme.success),
-                                                              tooltip: 'Receber',
-                                                              onPressed: () => _receber(mensalidade),
-                                                            ),
-                                                          IconButton(
-                                                            icon: const Icon(Icons.edit_outlined, color: AppTheme.secondary),
-                                                            tooltip: 'Editar',
-                                                            onPressed: () => _editar(mensalidade),
-                                                          ),
-                                                          IconButton(
-                                                            icon: const Icon(Icons.delete_outline, color: AppTheme.error),
-                                                            tooltip: 'Excluir',
-                                                            onPressed: () => _excluir(mensalidade),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ],
-                                                );
-                                              }).toList(),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
+                          child: _buildTabela(),
                         ),
                       ],
                     ),
@@ -324,170 +277,136 @@ class _ReceberMensalidadeScreenState extends State<ReceberMensalidadeScreen> {
                 ),
     );
   }
-}
 
-class _EditarMensalidadeDialog extends StatefulWidget {
-  final Mensalidade mensalidade;
-  final List<Aluno> alunos;
-  final ValueChanged<Mensalidade> onSalvar;
-
-  const _EditarMensalidadeDialog({
-    required this.mensalidade,
-    required this.alunos,
-    required this.onSalvar,
-  });
-
-  @override
-  State<_EditarMensalidadeDialog> createState() => _EditarMensalidadeDialogState();
-}
-
-class _EditarMensalidadeDialogState extends State<_EditarMensalidadeDialog> {
-  late final TextEditingController _valorController;
-  late final TextEditingController _observacaoController;
-  late String _alunoId;
-  late String _status;
-  late DateTime _dataVencimento;
-  DateTime? _dataPagamento;
-
-  final _statusOpcoes = ['pendente', 'pago', 'cancelado'];
-
-  @override
-  void initState() {
-    super.initState();
-    _valorController = TextEditingController(text: widget.mensalidade.valor.toStringAsFixed(2));
-    _observacaoController = TextEditingController(text: widget.mensalidade.observacao ?? '');
-    _alunoId = widget.mensalidade.alunoId;
-    _status = widget.mensalidade.status;
-    _dataVencimento = widget.mensalidade.dataVencimento;
-    _dataPagamento = widget.mensalidade.dataPagamento;
-  }
-
-  @override
-  void dispose() {
-    _valorController.dispose();
-    _observacaoController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _selecionarDataVencimento() async {
-    final data = await showDatePicker(
-      context: context,
-      initialDate: _dataVencimento,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (data != null) setState(() => _dataVencimento = data);
-  }
-
-  Future<void> _selecionarDataPagamento() async {
-    final data = await showDatePicker(
-      context: context,
-      initialDate: _dataPagamento ?? DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (data != null) setState(() => _dataPagamento = data);
-  }
-
-  void _salvar() {
-    final valor = double.tryParse(_valorController.text.replaceAll(',', '.'));
-    if (valor == null || valor <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Informe um valor válido.')),
-      );
-      return;
-    }
-
-    final atualizada = widget.mensalidade.copyWith(
-      alunoId: _alunoId,
-      valor: valor,
-      dataVencimento: _dataVencimento,
-      dataPagamento: _status == 'pago' ? _dataPagamento : null,
-      status: _status,
-      observacao: _observacaoController.text.trim(),
-    );
-
-    Navigator.of(context).pop();
-    widget.onSalvar(atualizada);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd/MM/yyyy');
-
-    return AlertDialog(
-      title: const Text('Editar Mensalidade'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<String>(
-              value: _alunoId,
-              decoration: const InputDecoration(labelText: 'Aluno'),
-              items: widget.alunos.map((Aluno aluno) {
-                return DropdownMenuItem<String>(
-                  value: aluno.id,
-                  child: Text(aluno.nome, overflow: TextOverflow.ellipsis),
-                );
-              }).toList(),
-              onChanged: (value) => setState(() => _alunoId = value!),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _valorController,
-              decoration: const InputDecoration(labelText: 'Valor'),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9,]'))],
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Data de vencimento'),
-              subtitle: Text(dateFormat.format(_dataVencimento)),
-              trailing: const Icon(Icons.calendar_today),
-              onTap: _selecionarDataVencimento,
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: _status,
-              decoration: const InputDecoration(labelText: 'Status'),
-              items: _statusOpcoes.map((status) {
-                return DropdownMenuItem<String>(
-                  value: status,
-                  child: Text(status[0].toUpperCase() + status.substring(1)),
-                );
-              }).toList(),
-              onChanged: (value) => setState(() => _status = value!),
-            ),
-            if (_status == 'pago') ...[
-              const SizedBox(height: 8),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Data de pagamento'),
-                subtitle: Text(_dataPagamento != null ? dateFormat.format(_dataPagamento!) : 'Não informada'),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: _selecionarDataPagamento,
-              ),
-            ],
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _observacaoController,
-              decoration: const InputDecoration(labelText: 'Observação'),
-              maxLines: 2,
-            ),
-          ],
+  Widget _buildFiltros() {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth > 700;
+            return Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: isWide ? 320 : double.infinity),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      labelText: 'Pesquisar aluno',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _filtroAluno.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () => setState(() => _filtroAluno = ''),
+                            )
+                          : null,
+                    ),
+                    onChanged: (value) => setState(() => _filtroAluno = value.trim()),
+                  ),
+                ),
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: isWide ? 240 : double.infinity),
+                  child: TextField(
+                    controller: _filtroDataController,
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      labelText: 'Data de vencimento',
+                      prefixIcon: const Icon(Icons.calendar_today_outlined),
+                      suffixIcon: _filtroDataVencimento != null
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: _limparFiltroData,
+                            )
+                          : null,
+                    ),
+                    onTap: _selecionarDataFiltro,
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        ElevatedButton(
-          onPressed: _salvar,
-          child: const Text('Salvar'),
-        ),
-      ],
+    );
+  }
+
+  Widget _buildTabela() {
+    if (_mensalidadesFiltradas.isEmpty) {
+      return const Center(child: Text('Nenhuma mensalidade encontrada.'));
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                child: DataTable(
+                  headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
+                  columns: const [
+                    DataColumn(label: Text('Data de vencimento', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Valor', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Aluno', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Pago', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Ações', style: TextStyle(fontWeight: FontWeight.bold))),
+                  ],
+                  rows: _mensalidadesFiltradas.map((mensalidade) {
+                    return DataRow(
+                      cells: [
+                        DataCell(Text(_dateFormat.format(mensalidade.dataVencimento))),
+                        DataCell(Text(_currency.format(mensalidade.valor))),
+                        DataCell(Text(_nomeAluno(mensalidade))),
+                        DataCell(
+                          Switch(
+                            value: mensalidade.status == 'pago',
+                            onChanged: (value) {
+                              if (value) {
+                                _marcarComoPago(mensalidade);
+                              }
+                            },
+                          ),
+                        ),
+                        DataCell(
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, color: AppTheme.secondary),
+                                tooltip: 'Editar',
+                                onPressed: () => _editarMensalidade(context, mensalidade),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: AppTheme.error),
+                                tooltip: 'Excluir',
+                                onPressed: () => _confirmarExclusao(context, mensalidade),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -34,6 +34,7 @@ func main() {
 
 	authHandler := handlers.NewAuthHandler(usuarioRepo, empresaRepo)
 	empresaHandler := handlers.NewEmpresaHandler(empresaRepo)
+	usuarioHandler := handlers.NewUsuarioHandler(usuarioRepo)
 	escolaHandler := handlers.NewEscolaHandler(escolaRepo)
 	alunoHandler := handlers.NewAlunoHandler(alunoRepo)
 	mensalidadeHandler := handlers.NewMensalidadeHandler(mensalidadeRepo, alunoRepo)
@@ -47,6 +48,15 @@ func main() {
 	// Empresas
 	mux.Handle("GET /api/empresas", middleware.Auth(http.HandlerFunc(empresaHandler.List)))
 	mux.Handle("GET /api/empresas/{id}", middleware.Auth(http.HandlerFunc(empresaHandler.GetByID)))
+	mux.Handle("POST /api/empresas", middleware.Auth(http.HandlerFunc(empresaHandler.Create)))
+	mux.Handle("PUT /api/empresas/{id}", middleware.Auth(http.HandlerFunc(empresaHandler.Update)))
+	mux.Handle("DELETE /api/empresas/{id}", middleware.Auth(http.HandlerFunc(empresaHandler.Delete)))
+
+	// Usuários
+	mux.Handle("GET /api/usuarios", middleware.Auth(http.HandlerFunc(usuarioHandler.List)))
+	mux.Handle("POST /api/usuarios", middleware.Auth(http.HandlerFunc(usuarioHandler.Create)))
+	mux.Handle("PUT /api/usuarios/{id}", middleware.Auth(http.HandlerFunc(usuarioHandler.Update)))
+	mux.Handle("DELETE /api/usuarios/{id}", middleware.Auth(http.HandlerFunc(usuarioHandler.Delete)))
 
 	// Escolas
 	mux.Handle("GET /api/escolas", middleware.Auth(http.HandlerFunc(escolaHandler.List)))

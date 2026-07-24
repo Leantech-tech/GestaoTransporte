@@ -43,6 +43,7 @@ class Aluno {
 
   Map<String, dynamic> toJson() {
     return {
+      'empresa_id': empresaId,
       'escola_id': escolaId,
       'nome': nome,
       'endereco': endereco,
