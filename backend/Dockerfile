@@ -1,7 +1,7 @@
 # Backend Dockerfile (Go API)
 # Build with context = backend/
 
-FROM golang:1.26-alpine AS builder
+FROM golang:1.25-alpine AS builder
 WORKDIR /src
 
 # Copy go.mod and go.sum first to cache deps
@@ -16,7 +16,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -o /app/api ./cmd/api
 
 # Final runtime image
-FROM alpine:3.18
+FROM alpine:3.20
 RUN addgroup -S app && adduser -S app -G app
 COPY --from=builder /app/api /usr/local/bin/api
 

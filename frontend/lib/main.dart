@@ -4,9 +4,12 @@ import 'package:provider/provider.dart';
 import 'core/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'screens/login_screen.dart';
+import 'services/api_client.dart';
 import 'services/api_data_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ApiClient.initialize();
   runApp(const MyApp());
 }
 

@@ -6,10 +6,24 @@ class ApiClient {
   // - Windows/Linux/Mac desktop: http://localhost:8080/api
   // - Android emulator: http://10.0.2.2:8080/api
   // - Dispositivo físico: http://<IP_DA_MAQUINA>:8080/api
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://localhost:8080/api',
-  );
+  static String _baseUrl = 'http://localhost:8080/api';
+
+  static String get baseUrl => _baseUrl;
+
+  static Future<void> initialize() async {
+    try {
+      final response = await http.get(Uri.parse('/config.json'));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final url = data['apiBaseUrl']?.toString();
+        if (url != null && url.isNotEmpty) {
+          _baseUrl = url;
+        }
+      }
+    } catch (_) {
+      // Mantém o default se config.json não existir
+    }
+  }
 
   String? _token;
 

@@ -738,9 +738,9 @@ class _CustomSidebar extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: AppTheme.error.withOpacity(0.10),
+                    color: AppTheme.error.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.error.withOpacity(0.35)),
+                    border: Border.all(color: AppTheme.error.withValues(alpha: 0.35)),
                   ),
                   child: Row(
                     children: [
