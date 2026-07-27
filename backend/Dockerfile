@@ -1,7 +1,7 @@
 # Backend Dockerfile (Go API)
 # Build with context = backend/
 
-FROM golang:1.20-alpine AS builder
+FROM golang:1.26-alpine AS builder
 WORKDIR /src
 
 # Copy go.mod and go.sum first to cache deps
