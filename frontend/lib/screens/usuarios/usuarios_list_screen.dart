@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/app_theme.dart';
-import '../../core/scrollable_data_table.dart';
 import '../../core/section_card.dart';
 import '../../models/empresa.dart';
 import '../../models/usuario.dart';
@@ -33,10 +32,17 @@ class _UsuariosListScreenState extends State<UsuariosListScreen> {
     setState(() => _carregando = true);
     try {
       final service = context.read<ApiDataService>();
-      final usuarios = await service.listarUsuarios();
+      final auth = context.read<AuthProvider>();
+      final usuarioLogado = auth.usuario;
       final empresas = await service.listarEmpresas();
+
+      final usuarios = await service.listarUsuarios();
+      final usuariosVisiveis = usuarioLogado?.isSuporte ?? false
+          ? usuarios
+          : usuarios.where((u) => u.empresaId == usuarioLogado?.empresaId).toList();
+
       setState(() {
-        _usuarios = usuarios;
+        _usuarios = usuariosVisiveis;
         _empresas = empresas;
         _erro = null;
       });

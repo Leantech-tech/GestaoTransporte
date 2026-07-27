@@ -25,23 +25,24 @@ func NewMensalidadeHandler(mensalidadeRepo *repository.MensalidadeRepository, al
 }
 
 type MensalidadeRequest struct {
-	AlunoID        string     `json:"aluno_id"`
-	Valor          float64    `json:"valor"`
-	DataVencimento string     `json:"data_vencimento"`
-	DataPagamento  *string    `json:"data_pagamento,omitempty"`
-	Status         string     `json:"status"`
-	Observacao     string     `json:"observacao,omitempty"`
+	AlunoID        string  `json:"aluno_id"`
+	Valor          float64 `json:"valor"`
+	DataVencimento string  `json:"data_vencimento"`
+	DataPagamento  *string `json:"data_pagamento,omitempty"`
+	Status         string  `json:"status"`
+	Observacao     string  `json:"observacao,omitempty"`
 }
 
 type GerarMensalidadesRequest struct {
-	AlunoID      string  `json:"aluno_id,omitempty"`
-	Quantidade   int     `json:"quantidade"`
-	GerarTodos   bool    `json:"gerar_todos"`
-	DataEmissao  *string `json:"data_emissao,omitempty"`
+	AlunoID     string  `json:"aluno_id,omitempty"`
+	Quantidade  int     `json:"quantidade"`
+	GerarTodos  bool    `json:"gerar_todos"`
+	DataEmissao *string `json:"data_emissao,omitempty"`
 }
 
 type GerarMensalidadesResponse struct {
-	Geradas int `json:"geradas"`
+	Geradas      int      `json:"geradas"`
+	Mensalidades []string `json:"mensalidades,omitempty"`
 }
 
 func (h *MensalidadeHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -167,6 +168,7 @@ func (h *MensalidadeHandler) BulkGenerate(w http.ResponseWriter, r *http.Request
 	}
 
 	geradas := 0
+	var geradasDatas []string
 	dataEmissao := time.Now().UTC()
 	if req.DataEmissao != nil {
 		d, err := parseDate(*req.DataEmissao)
@@ -186,8 +188,10 @@ func (h *MensalidadeHandler) BulkGenerate(w http.ResponseWriter, r *http.Request
 			mesesAdicionais = 1
 		}
 
-		for i := 0; i < req.Quantidade; i++ {
-			totalMonths := int(currentMonth) + mesesAdicionais + i
+		geradasAluno := 0
+		mesesOffset := 0
+		for geradasAluno < req.Quantidade {
+			totalMonths := int(currentMonth) + mesesAdicionais + mesesOffset
 			year := currentYear + (totalMonths-1)/12
 			month := time.Month((totalMonths-1)%12 + 1)
 			day := aluno.DiaVencimento
@@ -205,28 +209,32 @@ func (h *MensalidadeHandler) BulkGenerate(w http.ResponseWriter, r *http.Request
 				writeError(w, http.StatusInternalServerError, msg)
 				return
 			}
-			if existente != nil {
-				continue
+			if existente == nil {
+				m := &models.Mensalidade{
+					EmpresaID:      aluno.EmpresaID,
+					AlunoID:        aluno.ID,
+					Valor:          aluno.Valor,
+					DataVencimento: dataVencimento,
+					Status:         "pendente",
+				}
+				if err := h.mensalidadeRepo.Create(m); err != nil {
+					msg := fmt.Sprintf("erro ao gerar mensalidade: %v", err)
+					log.Printf("%s (aluno=%s data=%v)", msg, aluno.ID, dataVencimento)
+					writeError(w, http.StatusInternalServerError, msg)
+					return
+				}
+				geradasAluno++
+				geradas++
+				geradasDatas = append(geradasDatas, dataVencimento.Format("2006-01-02"))
 			}
-
-			m := &models.Mensalidade{
-				EmpresaID:      aluno.EmpresaID,
-				AlunoID:        aluno.ID,
-				Valor:          aluno.Valor,
-				DataVencimento: dataVencimento,
-				Status:         "pendente",
+			mesesOffset++
+			if mesesOffset > req.Quantidade+36 {
+				break
 			}
-			if err := h.mensalidadeRepo.Create(m); err != nil {
-				msg := fmt.Sprintf("erro ao gerar mensalidade: %v", err)
-				log.Printf("%s (aluno=%s data=%v)", msg, aluno.ID, dataVencimento)
-				writeError(w, http.StatusInternalServerError, msg)
-				return
-			}
-			geradas++
 		}
 	}
 
-	writeJSON(w, http.StatusCreated, GerarMensalidadesResponse{Geradas: geradas})
+	writeJSON(w, http.StatusCreated, GerarMensalidadesResponse{Geradas: geradas, Mensalidades: geradasDatas})
 }
 
 func (h *MensalidadeHandler) Update(w http.ResponseWriter, r *http.Request) {

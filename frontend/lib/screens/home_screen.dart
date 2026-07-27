@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/app_theme.dart';
+import '../services/api_data_service.dart';
 import '../models/aluno.dart';
 import '../models/escola.dart';
 import '../models/usuario.dart';
+import '../models/mensalidade.dart';
 import '../providers/auth_provider.dart';
 import 'alunos/alunos_list_screen.dart';
 import 'escolas/escolas_list_screen.dart';
@@ -28,12 +30,27 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _carregando = true;
   List<Aluno> _alunos = [];
   List<Escola> _escolas = [];
+  List<Mensalidade> _mensalidades = [];
+  ApiDataService? _dataServiceListener;
   String? _erro;
 
   @override
   void initState() {
     super.initState();
-    _carregarDados();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final service = context.read<AuthProvider>().dataService;
+      service.addListener(_carregarDados);
+      _dataServiceListener = service;
+      _carregarDados();
+    });
+  }
+
+  @override
+  void dispose() {
+    if (_dataServiceListener != null) {
+      _dataServiceListener!.removeListener(_carregarDados);
+    }
+    super.dispose();
   }
 
   Future<void> _carregarDados() async {
@@ -46,10 +63,13 @@ class _HomeScreenState extends State<HomeScreen> {
       final auth = context.read<AuthProvider>();
       final escolas = await auth.dataService.listarEscolas();
       final alunos = await auth.dataService.listarAlunos();
+      // Carregar mensalidades para calcular faturamento real
+      final mensalidades = await auth.dataService.listarMensalidades();
 
       setState(() {
         _escolas = escolas;
         _alunos = alunos;
+        _mensalidades = mensalidades;
         _carregando = false;
       });
     } catch (e) {
@@ -254,7 +274,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final totalAlunos = _alunos.length;
     final alunosInadimplentes = _alunos.where((a) => !a.ativo).length;
     final alunosAdimplentes = totalAlunos - alunosInadimplentes;
-    final faturamentoTotal = _alunos.fold<double>(0, (sum, a) => sum + (a.ativo ? a.valor : 0));
+    // Somar todas as mensalidades lançadas, independentemente do status `ativo`.
+    // Somar apenas mensalidades marcadas como pagas
+    final faturamentoTotal = _mensalidades
+      .where((m) => m.status.toLowerCase() == 'pago')
+      .fold<double>(0, (sum, m) => sum + m.valor);
 
     // Mapeamento alunos por escola para o gráfico
     final Map<String, int> alunosPorEscola = {};
@@ -379,7 +403,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         badgeText: '$alunosAdimplentes ativos',
                         icon: Icons.groups_rounded,
                         gradientColors: const [Color(0xFF2563EB), Color(0xFF1D4ED8)],
-                        onTap: () => setState(() => _selectedIndex = 2),
                       ),
                       _MetricCard(
                         title: 'Escolas Atendidas',
@@ -387,7 +410,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         badgeText: 'Instituições',
                         icon: Icons.domain_rounded,
                         gradientColors: const [Color(0xFF7C3AED), Color(0xFF6D28D9)],
-                        onTap: () => setState(() => _selectedIndex = 1),
                       ),
                       _MetricCard(
                         title: 'Mensalidades Pendentes',
@@ -396,7 +418,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         icon: Icons.pending_actions_rounded,
                         gradientColors: const [Color(0xFFEA580C), Color(0xFFC2410C)],
                         isWarning: true,
-                        onTap: () => setState(() => _selectedIndex = 2),
                       ),
                       _MetricCard(
                         title: 'Faturamento Mensal',
@@ -495,9 +516,10 @@ class _AdminHubScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final isAdmin = (auth.usuario?.isSuporte ?? false) || auth.usuario?.perfil == Perfil.admin;
+    final isSuporte = auth.usuario?.isSuporte ?? false;
+    final isAdmin = auth.usuario?.perfil == Perfil.admin;
 
-    if (!isAdmin) {
+    if (!isSuporte && !isAdmin) {
       return const Center(child: Text('Acesso restrito a administradores.'));
     }
 
@@ -524,14 +546,16 @@ class _AdminHubScreen extends StatelessWidget {
             ),
             child: Column(
               children: [
-                ListTile(
-                  leading: const Icon(Icons.business, color: AppTheme.primary),
-                  title: const Text('Empresas', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Transportadoras escolares cadastradas'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: onEmpresas,
-                ),
-                const Divider(height: 1),
+                if (isSuporte) ...[
+                  ListTile(
+                    leading: const Icon(Icons.business, color: AppTheme.primary),
+                    title: const Text('Empresas', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: const Text('Transportadoras escolares cadastradas'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: onEmpresas,
+                  ),
+                  const Divider(height: 1),
+                ],
                 ListTile(
                   leading: const Icon(Icons.people, color: AppTheme.primary),
                   title: const Text('Usuários', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -568,31 +592,25 @@ class _CustomSidebar extends StatelessWidget {
     final financeiroSelecionado = selectedIndex == 4 || selectedIndex == 5;
 
     return Container(
-      width: 250,
+      width: 240,
       decoration: const BoxDecoration(
-        color: Color(0xFF1B263B),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 10,
-            offset: Offset(2, 0),
-          ),
-        ],
+        color: Colors.white,
+        border: Border(right: BorderSide(color: Color(0xFFE5E7EB))),
       ),
       child: Column(
         children: [
           // Logo & Marca
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF3282B8),
+                    color: const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.directions_bus_rounded, color: Colors.white, size: 26),
+                  child: const Icon(Icons.directions_bus_rounded, color: AppTheme.primary, size: 24),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -610,10 +628,9 @@ class _CustomSidebar extends StatelessWidget {
                           Text(
                             empresaNome,
                             style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.3,
+                              color: AppTheme.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -622,9 +639,9 @@ class _CustomSidebar extends StatelessWidget {
                           const Text(
                             'Gestão de Transporte',
                             style: TextStyle(
-                              color: Color(0xFF3282B8),
+                              color: AppTheme.textSecondary,
                               fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -636,8 +653,8 @@ class _CustomSidebar extends StatelessWidget {
             ),
           ),
 
-          const Divider(color: Colors.white10, height: 1),
-          const SizedBox(height: 20),
+          const Divider(color: Color(0xFFF1F5F9), height: 1),
+          const SizedBox(height: 16),
 
           // Itens de Menu
           _SidebarItem(
@@ -680,8 +697,9 @@ class _CustomSidebar extends StatelessWidget {
           Builder(
             builder: (context) {
               final auth = context.watch<AuthProvider>();
-              final isAdmin = (auth.usuario?.isSuporte ?? false) || auth.usuario?.perfil == Perfil.admin;
-              if (!isAdmin) return const SizedBox.shrink();
+              final isSuporte = auth.usuario?.isSuporte ?? false;
+              final isAdmin = auth.usuario?.perfil == Perfil.admin;
+              if (!isSuporte && !isAdmin) return const SizedBox.shrink();
               final adminSelecionado = selectedIndex == 7 || selectedIndex == 8;
               return _ExpandableSidebarItem(
                 icon: Icons.admin_panel_settings_rounded,
@@ -690,11 +708,12 @@ class _CustomSidebar extends StatelessWidget {
                 isSelected: adminSelecionado,
                 onTap: () => onDestinationSelected(7),
                 children: [
-                  _SidebarSubItem(
-                    label: 'Empresas',
-                    isSelected: selectedIndex == 7,
-                    onTap: () => onDestinationSelected(7),
-                  ),
+                  if (isSuporte)
+                    _SidebarSubItem(
+                      label: 'Empresas',
+                      isSelected: selectedIndex == 7,
+                      onTap: () => onDestinationSelected(7),
+                    ),
                   _SidebarSubItem(
                     label: 'Usuários',
                     isSelected: selectedIndex == 8,
@@ -706,34 +725,37 @@ class _CustomSidebar extends StatelessWidget {
           ),
 
           const Spacer(),
-          const Divider(color: Colors.white10, height: 1),
+          const Divider(color: Color(0xFFF1F5F9), height: 1),
 
           // Botão Logout no Rodapé da Sidebar
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: InkWell(
-              onTap: onLogout,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade900.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.red.shade800.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.logout_rounded, color: Colors.red.shade300, size: 20),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Encerrar Sessão',
-                      style: TextStyle(
-                        color: Colors.red.shade300,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onLogout,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.error.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.error.withOpacity(0.35)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.logout_rounded, color: AppTheme.error, size: 20),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Encerrar Sessão',
+                        style: TextStyle(
+                          color: AppTheme.error,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -760,34 +782,33 @@ class _SidebarItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
       child: Material(
         color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          highlightColor: Colors.transparent,
-          splashColor: Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFF3282B8) : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
+              color: isSelected ? const Color(0xFFF1F5F9) : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               children: [
                 Icon(
                   icon,
-                  color: isSelected ? Colors.white : Colors.white60,
-                  size: 22,
+                  color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
+                  size: 20,
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 14),
                 Text(
                   label,
                   style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.white70,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected ? AppTheme.textPrimary : AppTheme.textSecondary,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                     fontSize: 14,
                   ),
                 ),
@@ -878,37 +899,37 @@ class _ExpandableSidebarItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Material(
             color: Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             child: InkWell(
               onTap: onTap,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFF3282B8) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
+                  color: isSelected ? const Color(0xFFF1F5F9) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       icon,
-                      color: isSelected ? Colors.white : Colors.white60,
-                      size: 22,
+                      color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
+                      size: 20,
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Text(
                         label,
                         style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.white70,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          color: isSelected ? AppTheme.textPrimary : AppTheme.textSecondary,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                           fontSize: 14,
                         ),
                       ),
@@ -918,7 +939,7 @@ class _ExpandableSidebarItem extends StatelessWidget {
                       duration: const Duration(milliseconds: 200),
                       child: Icon(
                         Icons.chevron_right,
-                        color: isSelected ? Colors.white70 : Colors.white38,
+                        color: isSelected ? AppTheme.textSecondary : const Color(0xFFCBD5E1),
                         size: 18,
                       ),
                     ),
@@ -956,42 +977,28 @@ class _SidebarSubItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 28),
+      padding: const EdgeInsets.only(left: 26, top: 2, bottom: 2),
       child: Material(
         color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          highlightColor: Colors.transparent,
-          splashColor: Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFF3282B8) : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
+              color: isSelected ? const Color(0xFFF1F5F9) : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.white : Colors.white38,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.white60,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? AppTheme.textPrimary : AppTheme.textSecondary,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                fontSize: 13,
+              ),
             ),
           ),
         ),
@@ -1011,7 +1018,6 @@ class _MetricCard extends StatelessWidget {
   final IconData icon;
   final List<Color> gradientColors;
   final bool isWarning;
-  final VoidCallback? onTap;
 
   const _MetricCard({
     required this.title,
@@ -1020,7 +1026,6 @@ class _MetricCard extends StatelessWidget {
     required this.icon,
     required this.gradientColors,
     this.isWarning = false,
-    this.onTap,
   });
 
   @override
@@ -1031,64 +1036,60 @@ class _MetricCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: Color(0xFFE5E7EB)),
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: gradientColors),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(icon, color: Colors.white, size: 20),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: isWarning ? const Color(0xFFC2410C) : AppTheme.textPrimary,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: gradientColors.first.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  badgeText,
-                  style: TextStyle(
-                    fontSize: 11,
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: gradientColors.first,
+                    color: AppTheme.textSecondary,
                   ),
                 ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: gradientColors),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 20),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: isWarning ? const Color(0xFFC2410C) : AppTheme.textPrimary,
+                letterSpacing: -0.5,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: gradientColors.first.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                badgeText,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: gradientColors.first,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

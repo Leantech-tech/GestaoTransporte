@@ -166,7 +166,7 @@ class ApiDataService extends ChangeNotifier {
     return data.map((e) => Mensalidade.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  Future<int> gerarMensalidades({
+  Future<GerarMensalidadesResult> gerarMensalidades({
     String? alunoId,
     required int quantidade,
     required bool gerarTodos,
@@ -185,7 +185,16 @@ class ApiDataService extends ChangeNotifier {
       throw _error(response);
     }
     final data = ApiClient.decodeBody(response);
-    return (data['geradas'] as num).toInt();
+    final mensalidades = (data['mensalidades'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        [];
+    // Notify listeners that mensalidades may have changed on the server
+    notifyListeners();
+    return GerarMensalidadesResult(
+      geradas: (data['geradas'] as num).toInt(),
+      mensalidades: mensalidades,
+    );
   }
 
   static String _formatDate(DateTime date) {
@@ -205,7 +214,9 @@ class ApiDataService extends ChangeNotifier {
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw _error(response);
     }
-    return Mensalidade.fromJson(ApiClient.decodeBody(response));
+    final result = Mensalidade.fromJson(ApiClient.decodeBody(response));
+    notifyListeners();
+    return result;
   }
 
   Future<void> removerMensalidade(String id) async {
@@ -213,6 +224,7 @@ class ApiDataService extends ChangeNotifier {
     if (response.statusCode != 204 && response.statusCode != 200) {
       throw _error(response);
     }
+    notifyListeners();
   }
 
   ApiException _error(http.Response response) {
@@ -221,4 +233,14 @@ class ApiDataService extends ChangeNotifier {
   }
 
   ApiException _msg(String msg) => ApiException(msg);
+}
+
+class GerarMensalidadesResult {
+  final int geradas;
+  final List<String> mensalidades;
+
+  const GerarMensalidadesResult({
+    required this.geradas,
+    required this.mensalidades,
+  });
 }

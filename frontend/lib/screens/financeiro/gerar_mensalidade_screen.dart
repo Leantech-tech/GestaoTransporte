@@ -26,7 +26,7 @@ class _GerarMensalidadeScreenState extends State<GerarMensalidadeScreen> {
   bool _carregando = true;
   bool _gerando = false;
   String? _erro;
-  int? _geradas;
+  GerarMensalidadesResult? _geradas;
   DateTime? _dataEmissao;
 
   @override
@@ -86,16 +86,19 @@ class _GerarMensalidadeScreenState extends State<GerarMensalidadeScreen> {
     setState(() => _gerando = true);
     try {
       final quantidade = int.parse(_quantidadeController.text.trim());
-      final geradas = await context.read<ApiDataService>().gerarMensalidades(
+      final resultado = await context.read<ApiDataService>().gerarMensalidades(
         alunoId: _alunoIdSelecionado,
         quantidade: quantidade,
         gerarTodos: _gerarTodos,
         dataEmissao: _dataEmissao,
       );
-      setState(() => _geradas = geradas);
+      setState(() => _geradas = resultado);
       if (mounted) {
+        final datas = resultado.mensalidades
+            .map((d) => _dateFormat.format(DateTime.parse(d)))
+            .join(', ');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$geradas mensalidade(s) gerada(s) com sucesso.')),
+          SnackBar(content: Text('${resultado.geradas} mensalidade(s) gerada(s): $datas')),
         );
       }
     } catch (e) {
@@ -226,7 +229,7 @@ class _GerarMensalidadeScreenState extends State<GerarMensalidadeScreen> {
                     icon: Icons.info_outline,
                     children: [
                       Text(
-                        'As mensalidades serão geradas a partir do mês seguinte à data de emissão, respeitando o dia de vencimento configurado no cadastro de cada aluno. Mensalidades já existentes para o mesmo mês/aluno serão ignoradas.',
+                        'As mensalidades são geradas a partir do mês da data de emissão. Se o dia de emissão for posterior ao vencimento do aluno, a primeira parcela começa no mês seguinte. Meses que já possuem mensalidade gerada para o aluno são ignorados, evitando duplicatas.',
                         style: TextStyle(fontSize: 14, color: AppTheme.textSecondary.withValues(alpha: 0.9)),
                       ),
                     ],
@@ -245,13 +248,30 @@ class _GerarMensalidadeScreenState extends State<GerarMensalidadeScreen> {
                   if (_geradas != null) ...[
                     const SizedBox(height: 20),
                     Center(
-                      child: Text(
-                        '$_geradas mensalidade(s) gerada(s).',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.success,
-                        ),
+                      child: Column(
+                        children: [
+                          Text(
+                            '${_geradas!.geradas} mensalidade(s) gerada(s).',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.success,
+                            ),
+                          ),
+                          if (_geradas!.mensalidades.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                _geradas!.mensalidades
+                                    .map((d) => _dateFormat.format(DateTime.parse(d)))
+                                    .join('  •  '),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ],

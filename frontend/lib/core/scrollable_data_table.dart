@@ -36,8 +36,8 @@ class ScrollableDataTable extends StatelessWidget {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               physics: const AlwaysScrollableScrollPhysics(),
-              child: SizedBox(
-                width: minWidth,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: minWidth),
                 child: SingleChildScrollView(
                   scrollDirection: Axis.vertical,
                   physics: const AlwaysScrollableScrollPhysics(),
