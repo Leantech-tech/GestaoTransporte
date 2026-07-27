@@ -42,40 +42,139 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Auth
-	mux.HandleFunc("POST /api/login", authHandler.Login)
-	mux.Handle("GET /api/me", middleware.Auth(http.HandlerFunc(authHandler.Me)))
+	mux.HandleFunc("/api/login", authHandler.Login)
+	mux.Handle("/api/me", middleware.Auth(http.HandlerFunc(authHandler.Me)))
 
-	// Empresas
-	mux.Handle("GET /api/empresas", middleware.Auth(http.HandlerFunc(empresaHandler.List)))
-	mux.Handle("GET /api/empresas/{id}", middleware.Auth(http.HandlerFunc(empresaHandler.GetByID)))
-	mux.Handle("POST /api/empresas", middleware.Auth(http.HandlerFunc(empresaHandler.Create)))
-	mux.Handle("PUT /api/empresas/{id}", middleware.Auth(http.HandlerFunc(empresaHandler.Update)))
-	mux.Handle("DELETE /api/empresas/{id}", middleware.Auth(http.HandlerFunc(empresaHandler.Delete)))
+	// Empresas (GET list | POST create)
+	mux.Handle("/api/empresas", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			empresaHandler.List(w, r)
+		case http.MethodPost:
+			empresaHandler.Create(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
 
-	// Usuários
-	mux.Handle("GET /api/usuarios", middleware.Auth(http.HandlerFunc(usuarioHandler.List)))
-	mux.Handle("POST /api/usuarios", middleware.Auth(http.HandlerFunc(usuarioHandler.Create)))
-	mux.Handle("PUT /api/usuarios/{id}", middleware.Auth(http.HandlerFunc(usuarioHandler.Update)))
-	mux.Handle("DELETE /api/usuarios/{id}", middleware.Auth(http.HandlerFunc(usuarioHandler.Delete)))
+	// Empresas by ID (GET | PUT | DELETE)
+	mux.Handle("/api/empresas/", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			empresaHandler.GetByID(w, r)
+		case http.MethodPut:
+			empresaHandler.Update(w, r)
+		case http.MethodDelete:
+			empresaHandler.Delete(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
 
-	// Escolas
-	mux.Handle("GET /api/escolas", middleware.Auth(http.HandlerFunc(escolaHandler.List)))
-	mux.Handle("POST /api/escolas", middleware.Auth(http.HandlerFunc(escolaHandler.Create)))
-	mux.Handle("PUT /api/escolas/{id}", middleware.Auth(http.HandlerFunc(escolaHandler.Update)))
-	mux.Handle("DELETE /api/escolas/{id}", middleware.Auth(http.HandlerFunc(escolaHandler.Delete)))
+	// Usuários (GET list | POST create)
+	mux.Handle("/api/usuarios", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			usuarioHandler.List(w, r)
+		case http.MethodPost:
+			usuarioHandler.Create(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
 
-	// Alunos
-	mux.Handle("GET /api/alunos", middleware.Auth(http.HandlerFunc(alunoHandler.List)))
-	mux.Handle("POST /api/alunos", middleware.Auth(http.HandlerFunc(alunoHandler.Create)))
-	mux.Handle("PUT /api/alunos/{id}", middleware.Auth(http.HandlerFunc(alunoHandler.Update)))
-	mux.Handle("DELETE /api/alunos/{id}", middleware.Auth(http.HandlerFunc(alunoHandler.Delete)))
+	// Usuários by ID (PUT | DELETE)
+	mux.Handle("/api/usuarios/", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPut:
+			usuarioHandler.Update(w, r)
+		case http.MethodDelete:
+			usuarioHandler.Delete(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
 
-	// Mensalidades
-	mux.Handle("GET /api/mensalidades", middleware.Auth(http.HandlerFunc(mensalidadeHandler.List)))
-	mux.Handle("POST /api/mensalidades", middleware.Auth(http.HandlerFunc(mensalidadeHandler.Create)))
-	mux.Handle("POST /api/mensalidades/gerar", middleware.Auth(http.HandlerFunc(mensalidadeHandler.BulkGenerate)))
-	mux.Handle("PUT /api/mensalidades/{id}", middleware.Auth(http.HandlerFunc(mensalidadeHandler.Update)))
-	mux.Handle("DELETE /api/mensalidades/{id}", middleware.Auth(http.HandlerFunc(mensalidadeHandler.Delete)))
+	// Escolas (GET list | POST create)
+	mux.Handle("/api/escolas", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			escolaHandler.List(w, r)
+		case http.MethodPost:
+			escolaHandler.Create(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
+
+	// Escolas by ID (PUT | DELETE)
+	mux.Handle("/api/escolas/", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPut:
+			escolaHandler.Update(w, r)
+		case http.MethodDelete:
+			escolaHandler.Delete(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
+
+	// Alunos (GET list | POST create)
+	mux.Handle("/api/alunos", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			alunoHandler.List(w, r)
+		case http.MethodPost:
+			alunoHandler.Create(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
+
+	// Alunos by ID (PUT | DELETE)
+	mux.Handle("/api/alunos/", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPut:
+			alunoHandler.Update(w, r)
+		case http.MethodDelete:
+			alunoHandler.Delete(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
+
+	// Mensalidades (GET list | POST create)
+	mux.Handle("/api/mensalidades", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			mensalidadeHandler.List(w, r)
+		case http.MethodPost:
+			mensalidadeHandler.Create(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
+
+	// Mensalidades gerar (bulk generate)
+	mux.Handle("/api/mensalidades/gerar", middleware.Auth(http.HandlerFunc(mensalidadeHandler.BulkGenerate)))
+
+	// Mensalidades by ID (PUT | DELETE)
+	mux.Handle("/api/mensalidades/", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPut:
+			mensalidadeHandler.Update(w, r)
+		case http.MethodDelete:
+			mensalidadeHandler.Delete(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
+
+	// Health check
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
 
 	// CORS
 	handler := cors.New(cors.Options{
