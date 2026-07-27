@@ -1,0 +1,16 @@
+.git
+.buildlog
+.build
+.dart_tool
+.packages
+.idea
+.gradle
+**/node_modules
+build/
+.idea/
+android/
+ios/
+windows/
+macos/
+linux/
+
