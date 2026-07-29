@@ -58,7 +58,7 @@ func main() {
 	})))
 
 	// Empresas by ID (GET | PUT | DELETE)
-	mux.Handle("/api/empresas/", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/empresas/{id}", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			empresaHandler.GetByID(w, r)
@@ -84,7 +84,7 @@ func main() {
 	})))
 
 	// Usuários by ID (PUT | DELETE)
-	mux.Handle("/api/usuarios/", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/usuarios/{id}", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPut:
 			usuarioHandler.Update(w, r)
@@ -108,7 +108,7 @@ func main() {
 	})))
 
 	// Escolas by ID (PUT | DELETE)
-	mux.Handle("/api/escolas/", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/escolas/{id}", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPut:
 			escolaHandler.Update(w, r)
@@ -132,7 +132,7 @@ func main() {
 	})))
 
 	// Alunos by ID (PUT | DELETE)
-	mux.Handle("/api/alunos/", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/alunos/{id}", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPut:
 			alunoHandler.Update(w, r)
@@ -159,7 +159,7 @@ func main() {
 	mux.Handle("/api/mensalidades/gerar", middleware.Auth(http.HandlerFunc(mensalidadeHandler.BulkGenerate)))
 
 	// Mensalidades by ID (PUT | DELETE)
-	mux.Handle("/api/mensalidades/", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/mensalidades/{id}", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPut:
 			mensalidadeHandler.Update(w, r)

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 
 import '../core/app_theme.dart';
@@ -57,8 +56,8 @@ class _LoginScreenState extends State<LoginScreen> {
       width: double.infinity,
       height: double.infinity,
       color: AppTheme.background,
-      child: SvgPicture.asset(
-        'assets/images/login_illustration.svg',
+      child: Image.asset(
+        'assets/images/login_illustration.png',
         width: double.infinity,
         height: double.infinity,
         fit: BoxFit.cover,
