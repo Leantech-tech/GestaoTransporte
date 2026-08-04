@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gestao-transporte/backend/internal/config"
 	"github.com/gestao-transporte/backend/internal/handlers"
@@ -26,6 +27,8 @@ func main() {
 	usuarioRepo := repository.NewUsuarioRepository(db)
 	escolaRepo := repository.NewEscolaRepository(db)
 	alunoRepo := repository.NewAlunoRepository(db)
+	colaboradorRepo := repository.NewColaboradorRepository(db)
+	veiculoRepo := repository.NewVeiculoRepository(db)
 	mensalidadeRepo := repository.NewMensalidadeRepository(db)
 
 	if err := seed(db, empresaRepo, usuarioRepo, escolaRepo, alunoRepo); err != nil {
@@ -37,6 +40,8 @@ func main() {
 	usuarioHandler := handlers.NewUsuarioHandler(usuarioRepo)
 	escolaHandler := handlers.NewEscolaHandler(escolaRepo)
 	alunoHandler := handlers.NewAlunoHandler(alunoRepo)
+	colaboradorHandler := handlers.NewColaboradorHandler(colaboradorRepo)
+	veiculoHandler := handlers.NewVeiculoHandler(veiculoRepo)
 	mensalidadeHandler := handlers.NewMensalidadeHandler(mensalidadeRepo, alunoRepo)
 
 	mux := http.NewServeMux()
@@ -58,7 +63,11 @@ func main() {
 	})))
 
 	// Empresas by ID (GET | PUT | DELETE)
-	mux.Handle("/api/empresas/{id}", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/empresas/", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/api/empresas/") {
+			http.NotFound(w, r)
+			return
+		}
 		switch r.Method {
 		case http.MethodGet:
 			empresaHandler.GetByID(w, r)
@@ -84,7 +93,11 @@ func main() {
 	})))
 
 	// Usuários by ID (PUT | DELETE)
-	mux.Handle("/api/usuarios/{id}", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/usuarios/", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/api/usuarios/") {
+			http.NotFound(w, r)
+			return
+		}
 		switch r.Method {
 		case http.MethodPut:
 			usuarioHandler.Update(w, r)
@@ -108,7 +121,11 @@ func main() {
 	})))
 
 	// Escolas by ID (PUT | DELETE)
-	mux.Handle("/api/escolas/{id}", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/escolas/", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/api/escolas/") {
+			http.NotFound(w, r)
+			return
+		}
 		switch r.Method {
 		case http.MethodPut:
 			escolaHandler.Update(w, r)
@@ -132,12 +149,72 @@ func main() {
 	})))
 
 	// Alunos by ID (PUT | DELETE)
-	mux.Handle("/api/alunos/{id}", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/alunos/", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/api/alunos/") {
+			http.NotFound(w, r)
+			return
+		}
 		switch r.Method {
 		case http.MethodPut:
 			alunoHandler.Update(w, r)
 		case http.MethodDelete:
 			alunoHandler.Delete(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
+
+	// Colaboradores (GET list | POST create)
+	mux.Handle("/api/colaboradores", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			colaboradorHandler.List(w, r)
+		case http.MethodPost:
+			colaboradorHandler.Create(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
+
+	// Colaboradores by ID (PUT | DELETE)
+	mux.Handle("/api/colaboradores/", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/api/colaboradores/") {
+			http.NotFound(w, r)
+			return
+		}
+		switch r.Method {
+		case http.MethodPut:
+			colaboradorHandler.Update(w, r)
+		case http.MethodDelete:
+			colaboradorHandler.Delete(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
+
+	// Veículos (GET list | POST create)
+	mux.Handle("/api/veiculos", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			veiculoHandler.List(w, r)
+		case http.MethodPost:
+			veiculoHandler.Create(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
+
+	// Veículos by ID (PUT | DELETE)
+	mux.Handle("/api/veiculos/", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/api/veiculos/") {
+			http.NotFound(w, r)
+			return
+		}
+		switch r.Method {
+		case http.MethodPut:
+			veiculoHandler.Update(w, r)
+		case http.MethodDelete:
+			veiculoHandler.Delete(w, r)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -159,7 +236,11 @@ func main() {
 	mux.Handle("/api/mensalidades/gerar", middleware.Auth(http.HandlerFunc(mensalidadeHandler.BulkGenerate)))
 
 	// Mensalidades by ID (PUT | DELETE)
-	mux.Handle("/api/mensalidades/{id}", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/mensalidades/", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/api/mensalidades/") {
+			http.NotFound(w, r)
+			return
+		}
 		switch r.Method {
 		case http.MethodPut:
 			mensalidadeHandler.Update(w, r)

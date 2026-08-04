@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/gestao-transporte/backend/internal/middleware"
 	"github.com/gestao-transporte/backend/internal/models"
@@ -27,6 +28,8 @@ type AlunoRequest struct {
 	DiaVencimento         int     `json:"dia_vencimento"`
 	ResponsavelFinanceiro string  `json:"responsavel_financeiro"`
 	ResponsavelTelefone   string  `json:"responsavel_telefone"`
+	DataInicioContrato    string  `json:"data_inicio_contrato,omitempty"`
+	DataFimContrato       string  `json:"data_fim_contrato,omitempty"`
 	Ativo                 bool    `json:"ativo"`
 }
 
@@ -66,6 +69,31 @@ func (h *AlunoHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var dataInicioContrato *time.Time
+	var dataFimContrato *time.Time
+	if req.DataInicioContrato != "" || req.DataFimContrato != "" {
+		if req.DataInicioContrato == "" || req.DataFimContrato == "" {
+			writeError(w, http.StatusBadRequest, "informe data inicial e data final do contrato")
+			return
+		}
+		dti, err := parseDate(req.DataInicioContrato)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "data inicial de contrato inválida")
+			return
+		}
+		dtf, err := parseDate(req.DataFimContrato)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "data final de contrato inválida")
+			return
+		}
+		if dtf.Before(dti) {
+			writeError(w, http.StatusBadRequest, "data final deve ser igual ou posterior à data inicial")
+			return
+		}
+		dataInicioContrato = &dti
+		dataFimContrato = &dtf
+	}
+
 	a := &models.Aluno{
 		EmpresaID:             empresaID,
 		EscolaID:              req.EscolaID,
@@ -76,6 +104,8 @@ func (h *AlunoHandler) Create(w http.ResponseWriter, r *http.Request) {
 		DiaVencimento:         req.DiaVencimento,
 		ResponsavelFinanceiro: req.ResponsavelFinanceiro,
 		ResponsavelTelefone:   req.ResponsavelTelefone,
+		DataInicioContrato:    dataInicioContrato,
+		DataFimContrato:       dataFimContrato,
 		Ativo:                 req.Ativo,
 	}
 	if err := h.repo.Create(a); err != nil {
@@ -92,7 +122,7 @@ func (h *AlunoHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := r.PathValue("id")
+	id := pathValue(r, "id")
 	existente, err := h.repo.FindByID(id)
 	if err != nil || existente == nil {
 		writeError(w, http.StatusNotFound, "aluno não encontrado")
@@ -137,6 +167,28 @@ func (h *AlunoHandler) Update(w http.ResponseWriter, r *http.Request) {
 	existente.DiaVencimento = req.DiaVencimento
 	existente.ResponsavelFinanceiro = req.ResponsavelFinanceiro
 	existente.ResponsavelTelefone = req.ResponsavelTelefone
+	if req.DataInicioContrato != "" || req.DataFimContrato != "" {
+		if req.DataInicioContrato == "" || req.DataFimContrato == "" {
+			writeError(w, http.StatusBadRequest, "informe data inicial e data final do contrato")
+			return
+		}
+		dti, err := parseDate(req.DataInicioContrato)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "data inicial de contrato inválida")
+			return
+		}
+		dtf, err := parseDate(req.DataFimContrato)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "data final de contrato inválida")
+			return
+		}
+		if dtf.Before(dti) {
+			writeError(w, http.StatusBadRequest, "data final deve ser igual ou posterior à data inicial")
+			return
+		}
+		existente.DataInicioContrato = &dti
+		existente.DataFimContrato = &dtf
+	}
 	existente.Ativo = req.Ativo
 
 	if err := h.repo.Update(existente); err != nil {
@@ -153,7 +205,7 @@ func (h *AlunoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := r.PathValue("id")
+	id := pathValue(r, "id")
 	existente, err := h.repo.FindByID(id)
 	if err != nil || existente == nil {
 		writeError(w, http.StatusNotFound, "aluno não encontrado")

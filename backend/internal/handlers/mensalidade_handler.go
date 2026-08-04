@@ -244,7 +244,7 @@ func (h *MensalidadeHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := r.PathValue("id")
+	id := pathValue(r, "id")
 	existente, err := h.mensalidadeRepo.FindByID(id)
 	if err != nil || existente == nil {
 		writeError(w, http.StatusNotFound, "mensalidade não encontrada")
@@ -302,7 +302,7 @@ func (h *MensalidadeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := r.PathValue("id")
+	id := pathValue(r, "id")
 	existente, err := h.mensalidadeRepo.FindByID(id)
 	if err != nil || existente == nil {
 		writeError(w, http.StatusNotFound, "mensalidade não encontrada")

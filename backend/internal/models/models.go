@@ -11,14 +11,14 @@ const (
 )
 
 type Empresa struct {
-	ID        string     `json:"id"`
-	Nome      string     `json:"nome"`
-	CNPJ      *string    `json:"cnpj,omitempty"`
-	Telefone  *string    `json:"telefone,omitempty"`
-	Endereco  *string    `json:"endereco,omitempty"`
-	Ativa     bool       `json:"ativa"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
+	ID        string    `json:"id"`
+	Nome      string    `json:"nome"`
+	CNPJ      *string   `json:"cnpj,omitempty"`
+	Telefone  *string   `json:"telefone,omitempty"`
+	Endereco  *string   `json:"endereco,omitempty"`
+	Ativa     bool      `json:"ativa"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type Usuario struct {
@@ -34,29 +34,32 @@ type Usuario struct {
 }
 
 type Escola struct {
-	ID              string    `json:"id"`
-	EmpresaID       string    `json:"empresa_id"`
-	Nome            string    `json:"nome"`
-	EnderecoCompleto string   `json:"endereco_completo"`
-	Ativa           bool      `json:"ativa"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID               string    `json:"id"`
+	EmpresaID        string    `json:"empresa_id"`
+	Nome             string    `json:"nome"`
+	EnderecoCompleto string    `json:"endereco_completo"`
+	Telefone         *string   `json:"telefone,omitempty"`
+	Ativa            bool      `json:"ativa"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }
 
 type Aluno struct {
-	ID                    string    `json:"id"`
-	EmpresaID             string    `json:"empresa_id"`
-	EscolaID              string    `json:"escola_id"`
-	Nome                  string    `json:"nome"`
-	Endereco              string    `json:"endereco"`
-	Mensalidade           float64   `json:"mensalidade"`
-	Valor                 float64   `json:"valor"`
-	DiaVencimento         int       `json:"dia_vencimento"`
-	ResponsavelFinanceiro string    `json:"responsavel_financeiro"`
-	ResponsavelTelefone   string    `json:"responsavel_telefone"`
-	Ativo                 bool      `json:"ativo"`
-	CreatedAt             time.Time `json:"created_at"`
-	UpdatedAt             time.Time `json:"updated_at"`
+	ID                    string     `json:"id"`
+	EmpresaID             string     `json:"empresa_id"`
+	EscolaID              string     `json:"escola_id"`
+	Nome                  string     `json:"nome"`
+	Endereco              string     `json:"endereco"`
+	Mensalidade           float64    `json:"mensalidade"`
+	Valor                 float64    `json:"valor"`
+	DiaVencimento         int        `json:"dia_vencimento"`
+	ResponsavelFinanceiro string     `json:"responsavel_financeiro"`
+	ResponsavelTelefone   string     `json:"responsavel_telefone"`
+	DataInicioContrato    *time.Time `json:"data_inicio_contrato,omitempty"`
+	DataFimContrato       *time.Time `json:"data_fim_contrato,omitempty"`
+	Ativo                 bool       `json:"ativo"`
+	CreatedAt             time.Time  `json:"created_at"`
+	UpdatedAt             time.Time  `json:"updated_at"`
 }
 
 type Mensalidade struct {

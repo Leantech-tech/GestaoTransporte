@@ -5,10 +5,29 @@ class AppInputFormatters {
 
   static TextInputFormatter telefone() => _TelefoneFormatter();
 
+  static TextInputFormatter cpf() => _CpfFormatter();
+
   static TextInputFormatter moeda() => _MoedaFormatter();
+
+  static TextInputFormatter placa() => _PlacaFormatter();
+
+  static String placaRaw(String value) => value.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+
+  static bool placaValida(String value) {
+    final placa = placaRaw(value);
+    return RegExp(r'^[A-Z]{3}[0-9]{4}$').hasMatch(placa) ||
+        RegExp(r'^[A-Z]{3}[0-9][A-Z][0-9]{2}$').hasMatch(placa);
+  }
 
   static String formatTelefone(String value) {
     return _TelefoneFormatter().formatEditUpdate(
+      const TextEditingValue(),
+      TextEditingValue(text: value),
+    ).text;
+  }
+
+  static String formatCpf(String value) {
+    return _CpfFormatter().formatEditUpdate(
       const TextEditingValue(),
       TextEditingValue(text: value),
     ).text;
@@ -24,6 +43,8 @@ class AppInputFormatters {
   static String cnpjRaw(String value) => value.replaceAll(RegExp(r'[^0-9]'), '');
 
   static String telefoneRaw(String value) => value.replaceAll(RegExp(r'[^0-9]'), '');
+
+  static String cpfRaw(String value) => value.replaceAll(RegExp(r'[^0-9]'), '');
 
   static String moedaRaw(String value) {
     return value.replaceAll(RegExp(r'[^0-9]'), '');
@@ -92,6 +113,47 @@ class _TelefoneFormatter extends TextInputFormatter {
       }
     } else {
       formatted = digits;
+    }
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+class _CpfFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    var digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length > 11) digits = digits.substring(0, 11);
+
+    String formatted = '';
+    if (digits.length >= 4) {
+      formatted = '${digits.substring(0, 3)}.';
+      if (digits.length > 3) formatted += '${digits.substring(3, digits.length < 6 ? digits.length : 6)}';
+      if (digits.length >= 6) formatted += '.${digits.substring(6, digits.length < 9 ? digits.length : 9)}';
+      if (digits.length >= 9) formatted += '-${digits.substring(9)}';
+    } else {
+      formatted = digits;
+    }
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+class _PlacaFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    var placa = newValue.text.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    if (placa.length > 7) placa = placa.substring(0, 7);
+
+    String formatted = placa;
+    if (placa.length > 3 && RegExp(r'^[A-Z]{3}[0-9]+$').hasMatch(placa)) {
+      formatted = '${placa.substring(0, 3)}-${placa.substring(3)}';
     }
 
     return TextEditingValue(

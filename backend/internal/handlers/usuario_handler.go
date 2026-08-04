@@ -139,7 +139,7 @@ func (h *UsuarioHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := r.PathValue("id")
+	id := pathValue(r, "id")
 	existente, err := h.usuarioRepo.FindByID(id)
 	if err != nil || existente == nil {
 		writeError(w, http.StatusNotFound, "usuário não encontrado")
@@ -210,7 +210,7 @@ func (h *UsuarioHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := r.PathValue("id")
+	id := pathValue(r, "id")
 	if claims.UsuarioID == id {
 		writeError(w, http.StatusBadRequest, "não é possível excluir o próprio usuário")
 		return

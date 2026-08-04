@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/gestao-transporte/backend/internal/middleware"
 	"github.com/gestao-transporte/backend/internal/models"
@@ -21,6 +22,7 @@ type EscolaRequest struct {
 	EmpresaID        string `json:"empresa_id,omitempty"`
 	Nome             string `json:"nome"`
 	EnderecoCompleto string `json:"endereco_completo"`
+	Telefone         string `json:"telefone,omitempty"`
 	Ativa            bool   `json:"ativa"`
 }
 
@@ -51,6 +53,11 @@ func (h *EscolaHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var telefone *string
+	if strings.TrimSpace(req.Telefone) != "" {
+		telefone = &req.Telefone
+	}
+
 	empresaID := claims.EmpresaID
 	if claims.Perfil == string(models.PerfilSuporte) {
 		empresaID = req.EmpresaID
@@ -64,6 +71,7 @@ func (h *EscolaHandler) Create(w http.ResponseWriter, r *http.Request) {
 		EmpresaID:        empresaID,
 		Nome:             req.Nome,
 		EnderecoCompleto: req.EnderecoCompleto,
+		Telefone:         telefone,
 		Ativa:            req.Ativa,
 	}
 	if err := h.repo.Create(e); err != nil {
@@ -80,7 +88,7 @@ func (h *EscolaHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := r.PathValue("id")
+	id := pathValue(r, "id")
 	existente, err := h.repo.FindByID(id)
 	if err != nil || existente == nil {
 		writeError(w, http.StatusNotFound, "escola não encontrada")
@@ -103,6 +111,11 @@ func (h *EscolaHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	existente.Nome = req.Nome
 	existente.EnderecoCompleto = req.EnderecoCompleto
+	if strings.TrimSpace(req.Telefone) != "" {
+		existente.Telefone = &req.Telefone
+	} else {
+		existente.Telefone = nil
+	}
 	existente.Ativa = req.Ativa
 	if err := h.repo.Update(existente); err != nil {
 		writeError(w, http.StatusInternalServerError, "erro ao atualizar escola")
@@ -118,7 +131,7 @@ func (h *EscolaHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := r.PathValue("id")
+	id := pathValue(r, "id")
 	existente, err := h.repo.FindByID(id)
 	if err != nil || existente == nil {
 		writeError(w, http.StatusNotFound, "escola não encontrada")

@@ -50,13 +50,56 @@ CREATE TABLE IF NOT EXISTS escolas (
     empresa_id      UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
     nome            VARCHAR(255) NOT NULL,
     endereco_completo TEXT NOT NULL,
+    telefone        VARCHAR(20),
     ativa           BOOLEAN NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ------------------------------------------------------------
--- 4. Tabela de alunos
+-- 4. Tabela de colaboradores
+-- Antes da tabela de alunos para garantir dependências
+CREATE TABLE IF NOT EXISTS colaboradores (
+    id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    empresa_id    UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+    nome          VARCHAR(255) NOT NULL,
+    tipo          VARCHAR(20) NOT NULL CHECK (tipo IN ('motorista', 'professor', 'monitor')),
+    telefone      VARCHAR(20) NOT NULL,
+    cpf           VARCHAR(20) NOT NULL,
+    ativa         BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Índices para colaboradores
+CREATE INDEX IF NOT EXISTS idx_colaboradores_empresa ON colaboradores(empresa_id);
+
+-- Trigger de atualização automática para colaboradores
+CREATE TRIGGER IF NOT EXISTS trg_colaboradores_updated_at
+    BEFORE UPDATE ON colaboradores
+    FOR EACH ROW EXECUTE FUNCTION atualiza_updated_at();
+
+-- ------------------------------------------------------------
+-- 5. Tabela de veículos
+-- Veículos da frota da transportadora.
+CREATE TABLE IF NOT EXISTS veiculos (
+    id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    empresa_id    UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+    nome          VARCHAR(255) NOT NULL,
+    placa         VARCHAR(20) NOT NULL,
+    ativo         BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_veiculos_empresa ON veiculos(empresa_id);
+
+CREATE TRIGGER IF NOT EXISTS trg_veiculos_updated_at
+    BEFORE UPDATE ON veiculos
+    FOR EACH ROW EXECUTE FUNCTION atualiza_updated_at();
+
+-- ------------------------------------------------------------
+-- 6. Tabela de alunos
 -- Vinculado a uma empresa e a uma escola.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS alunos (

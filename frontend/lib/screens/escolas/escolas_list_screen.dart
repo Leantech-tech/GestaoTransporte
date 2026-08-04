@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/app_theme.dart';
+import '../../core/input_formatters.dart';
 import '../../core/scrollable_data_table.dart';
 import '../../core/section_card.dart';
 import '../../models/escola.dart';
@@ -100,7 +102,7 @@ class _EscolasListScreenState extends State<EscolasListScreen> {
                         child: _escolas.isEmpty
                             ? const Center(child: Text('Nenhuma escola cadastrada.'))
                             : ScrollableDataTable(
-                                columnCount: 4,
+                                columnCount: isSuporte ? 4 : 5,
                                 onRefresh: _carregar,
                                 child: Card(
                                   elevation: 0,
@@ -113,6 +115,7 @@ class _EscolasListScreenState extends State<EscolasListScreen> {
                                     columns: [
                                       const DataColumn(label: Text('Nome da Escola', style: TextStyle(fontWeight: FontWeight.bold))),
                                       const DataColumn(label: Text('Endereço Completo', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      const DataColumn(label: Text('Telefone', style: TextStyle(fontWeight: FontWeight.bold))),
                                       const DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
                                       if (!isSuporte)
                                         const DataColumn(label: Text('Ações', style: TextStyle(fontWeight: FontWeight.bold))),
@@ -130,6 +133,7 @@ class _EscolasListScreenState extends State<EscolasListScreen> {
                                             ),
                                           ),
                                           DataCell(Text(escola.enderecoCompleto)),
+                                          DataCell(Text(escola.telefone ?? '-')),
                                           DataCell(
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -236,6 +240,7 @@ class _EscolaFormScreenState extends State<EscolaFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nomeController;
   late final TextEditingController _enderecoController;
+  late final TextEditingController _telefoneController;
   bool _ativa = true;
   bool _salvando = false;
 
@@ -244,6 +249,9 @@ class _EscolaFormScreenState extends State<EscolaFormScreen> {
     super.initState();
     _nomeController = TextEditingController(text: widget.escola?.nome ?? '');
     _enderecoController = TextEditingController(text: widget.escola?.enderecoCompleto ?? '');
+    _telefoneController = TextEditingController(
+      text: widget.escola?.telefone != null ? AppInputFormatters.formatTelefone(widget.escola!.telefone!) : '',
+    );
     _ativa = widget.escola?.ativa ?? true;
   }
 
@@ -251,6 +259,7 @@ class _EscolaFormScreenState extends State<EscolaFormScreen> {
   void dispose() {
     _nomeController.dispose();
     _enderecoController.dispose();
+    _telefoneController.dispose();
     super.dispose();
   }
 
@@ -276,6 +285,7 @@ class _EscolaFormScreenState extends State<EscolaFormScreen> {
         empresaId: empresaId,
         nome: _nomeController.text.trim(),
         enderecoCompleto: _enderecoController.text.trim(),
+        telefone: _telefoneController.text.trim().isEmpty ? null : _telefoneController.text.trim(),
         ativa: _ativa,
       );
 
@@ -333,6 +343,18 @@ class _EscolaFormScreenState extends State<EscolaFormScreen> {
                         maxLines: 3,
                         validator: (value) =>
                             value == null || value.trim().isEmpty ? 'Informe o endereço.' : null,
+                      ),
+                      const SizedBox(height: 20),
+                      TextFormField(
+                        controller: _telefoneController,
+                        decoration: const InputDecoration(
+                          labelText: 'Telefone',
+                          prefixIcon: Icon(Icons.phone),
+                        ),
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [AppInputFormatters.telefone()],
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty ? 'Informe o telefone.' : null,
                       ),
                     ],
                   ),

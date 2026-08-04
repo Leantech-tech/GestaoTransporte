@@ -14,8 +14,10 @@ import 'escolas/escolas_list_screen.dart';
 import 'financeiro/financeiro_hub_screen.dart';
 import 'financeiro/gerar_mensalidade_screen.dart';
 import 'financeiro/receber_mensalidade_screen.dart';
+import 'colaboradores/colaboradores_list_screen.dart';
 import 'empresas/empresas_list_screen.dart';
 import 'usuarios/usuarios_list_screen.dart';
+import 'veiculos/veiculos_list_screen.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -103,6 +105,13 @@ class _HomeScreenState extends State<HomeScreen> {
     if (result == true) _carregarDados();
   }
 
+  Future<void> _abrirFormularioColaborador(BuildContext context) async {
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ColaboradorFormScreen()),
+    );
+    if (result != null) _carregarDados();
+  }
+
   // Índices de navegação:
   // 0 = Dashboard
   // 1 = Escolas
@@ -113,6 +122,8 @@ class _HomeScreenState extends State<HomeScreen> {
   // 6 = Admin Hub (mobile)
   // 7 = Empresas
   // 8 = Usuários
+  // 9 = Colaboradores
+  // 10 = Veículos
 
   String get _tituloAppBar {
     switch (_selectedIndex) {
@@ -133,6 +144,10 @@ class _HomeScreenState extends State<HomeScreen> {
         return 'Gestão de Empresas';
       case 8:
         return 'Gestão de Usuários';
+      case 9:
+        return 'Gestão de Colaboradores';
+      case 10:
+        return 'Gestão de Veículos';
       default:
         return '';
     }
@@ -145,13 +160,16 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_selectedIndex == 2) {
       return () => _abrirFormularioAluno(context);
     }
+    if (_selectedIndex == 9) {
+      return () => _abrirFormularioColaborador(context);
+    }
     return null;
   }
 
   int get _bottomNavIndex {
     if (_selectedIndex <= 3) return _selectedIndex;
     if (_selectedIndex == 4 || _selectedIndex == 5) return 3;
-    if (_selectedIndex == 6 || _selectedIndex == 7 || _selectedIndex == 8) return 4;
+    if (_selectedIndex == 6 || _selectedIndex == 7 || _selectedIndex == 8 || _selectedIndex == 9 || _selectedIndex == 10) return 4;
     return 0;
   }
 
@@ -172,16 +190,18 @@ class _HomeScreenState extends State<HomeScreen> {
       _AdminHubScreen(
         onEmpresas: () => setState(() => _selectedIndex = 7),
         onUsuarios: () => setState(() => _selectedIndex = 8),
+        onColaboradores: () => setState(() => _selectedIndex = 9),
       ),
       const EmpresasListScreen(),
       const UsuariosListScreen(),
+      const ColaboradoresListScreen(),
+      const VeiculosListScreen(),
     ];
 
     if (isWide) {
       return Scaffold(
         body: Row(
           children: [
-            // Sidebar Elegante
             _CustomSidebar(
               selectedIndex: _selectedIndex,
               onDestinationSelected: (index) {
@@ -192,7 +212,6 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               child: Column(
                 children: [
-                  // Top Navbar Sofisticada
                   _TopNavbar(
                     title: _tituloAppBar,
                     onLogout: _logout,
@@ -509,9 +528,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class _AdminHubScreen extends StatelessWidget {
   final VoidCallback onEmpresas;
+  final VoidCallback onColaboradores;
   final VoidCallback onUsuarios;
 
-  const _AdminHubScreen({required this.onEmpresas, required this.onUsuarios});
+  const _AdminHubScreen({
+    required this.onEmpresas,
+    required this.onColaboradores,
+    required this.onUsuarios,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -674,6 +698,31 @@ class _CustomSidebar extends StatelessWidget {
             label: 'Alunos',
             isSelected: selectedIndex == 2,
             onTap: () => onDestinationSelected(2),
+          ),
+          Builder(
+            builder: (context) {
+              final auth = context.watch<AuthProvider>();
+              final isSuporte = auth.usuario?.isSuporte ?? false;
+              final isAdmin = auth.usuario?.perfil == Perfil.admin;
+              if (!isSuporte && !isAdmin) return const SizedBox.shrink();
+
+              return Column(
+                children: [
+                  _SidebarItem(
+                    icon: Icons.person_outline,
+                    label: 'Colaboradores',
+                    isSelected: selectedIndex == 9,
+                    onTap: () => onDestinationSelected(9),
+                  ),
+                  _SidebarItem(
+                    icon: Icons.directions_car_rounded,
+                    label: 'Veículos',
+                    isSelected: selectedIndex == 10,
+                    onTap: () => onDestinationSelected(10),
+                  ),
+                ],
+              );
+            },
           ),
           _ExpandableSidebarItem(
             icon: Icons.account_balance_wallet_rounded,

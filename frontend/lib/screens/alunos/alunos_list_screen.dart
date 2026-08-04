@@ -106,7 +106,7 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
                         child: _alunos.isEmpty
                             ? const Center(child: Text('Nenhum aluno cadastrado.'))
                             : ScrollableDataTable(
-                                columnCount: 9,
+                                columnCount: isSuporte ? 9 : 10,
                                 onRefresh: _carregar,
                                 child: Card(
                                   elevation: 0,
@@ -119,6 +119,7 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
                                     columns: [
                                       const DataColumn(label: Text('Nome do Aluno', style: TextStyle(fontWeight: FontWeight.bold))),
                                       const DataColumn(label: Text('Endereço', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      const DataColumn(label: Text('Contrato', style: TextStyle(fontWeight: FontWeight.bold))),
                                       const DataColumn(label: Text('Mensalidade', style: TextStyle(fontWeight: FontWeight.bold))),
                                       const DataColumn(label: Text('Valor', style: TextStyle(fontWeight: FontWeight.bold))),
                                       const DataColumn(label: Text('Vencimento', style: TextStyle(fontWeight: FontWeight.bold))),
@@ -141,6 +142,9 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
                                             ),
                                           ),
                                           DataCell(Text(aluno.endereco)),
+                                          DataCell(Text(aluno.dataInicioContrato != null && aluno.dataFimContrato != null
+                                              ? '${DateFormat('dd/MM/yyyy').format(aluno.dataInicioContrato!)} - ${DateFormat('dd/MM/yyyy').format(aluno.dataFimContrato!)}'
+                                              : '-')),
                                           DataCell(Text(currency.format(aluno.mensalidade))),
                                           DataCell(Text(currency.format(aluno.valor))),
                                           DataCell(Text('Dia ${aluno.diaVencimento}')),
@@ -257,6 +261,8 @@ class _AlunoFormScreenState extends State<AlunoFormScreen> {
   late final TextEditingController _diaVencimentoController;
   late final TextEditingController _responsavelController;
   late final TextEditingController _responsavelTelefoneController;
+  late final TextEditingController _contratoDataInicialController;
+  late final TextEditingController _contratoDataFinalController;
   String? _escolaIdSelecionada;
   bool _ativo = true;
   bool _salvando = false;
@@ -282,6 +288,12 @@ class _AlunoFormScreenState extends State<AlunoFormScreen> {
     _responsavelController = TextEditingController(text: aluno?.responsavelNome ?? '');
     _responsavelTelefoneController = TextEditingController(
       text: aluno != null ? AppInputFormatters.formatTelefone(aluno.responsavelTelefone) : '',
+    );
+    _contratoDataInicialController = TextEditingController(
+      text: aluno?.dataInicioContrato != null ? DateFormat('dd/MM/yyyy').format(aluno!.dataInicioContrato!) : '',
+    );
+    _contratoDataFinalController = TextEditingController(
+      text: aluno?.dataFimContrato != null ? DateFormat('dd/MM/yyyy').format(aluno!.dataFimContrato!) : '',
     );
     _escolaIdSelecionada = aluno?.escolaId;
     _ativo = aluno?.ativo ?? true;
@@ -324,7 +336,44 @@ class _AlunoFormScreenState extends State<AlunoFormScreen> {
     _diaVencimentoController.dispose();
     _responsavelController.dispose();
     _responsavelTelefoneController.dispose();
+    _contratoDataInicialController.dispose();
+    _contratoDataFinalController.dispose();
     super.dispose();
+  }
+
+  Future<void> _selectDate(BuildContext context, TextEditingController controller) async {
+    final initialDate = controller.text.isNotEmpty
+        ? DateFormat('dd/MM/yyyy').parseStrict(controller.text)
+        : DateTime.now();
+    final firstDate = DateTime(DateTime.now().year - 5);
+    final lastDate = DateTime(DateTime.now().year + 5);
+
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      locale: const Locale('pt', 'BR'),
+      helpText: 'Selecione a data',
+      confirmText: 'OK',
+      cancelText: 'Cancelar',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+                  primary: AppTheme.secondary,
+                  onPrimary: Colors.white,
+                  surface: Colors.white,
+                ),
+            dialogBackgroundColor: AppTheme.surface,
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (selected != null) {
+      controller.text = DateFormat('dd/MM/yyyy').format(selected);
+    }
   }
 
   Future<void> _salvar() async {
@@ -353,6 +402,18 @@ class _AlunoFormScreenState extends State<AlunoFormScreen> {
 
     setState(() => _salvando = true);
     try {
+      DateTime? dataInicioContrato;
+      DateTime? dataFimContrato;
+      if (_contratoDataInicialController.text.isNotEmpty || _contratoDataFinalController.text.isNotEmpty) {
+        if (_contratoDataInicialController.text.isEmpty || _contratoDataFinalController.text.isEmpty) {
+          throw 'Informe data inicial e data final do contrato.';
+        }
+        dataInicioContrato = DateFormat('dd/MM/yyyy').parseStrict(_contratoDataInicialController.text.trim());
+        dataFimContrato = DateFormat('dd/MM/yyyy').parseStrict(_contratoDataFinalController.text.trim());
+        if (dataFimContrato.isBefore(dataInicioContrato)) {
+          throw 'Data final deve ser igual ou posterior à data inicial.';
+        }
+      }
       final aluno = Aluno(
         id: widget.aluno?.id ?? 'new-${const Uuid().v4()}',
         empresaId: empresaId,
@@ -364,6 +425,8 @@ class _AlunoFormScreenState extends State<AlunoFormScreen> {
         diaVencimento: int.parse(_diaVencimentoController.text.trim()),
         responsavelNome: _responsavelController.text.trim(),
         responsavelTelefone: _responsavelTelefoneController.text.trim(),
+        dataInicioContrato: dataInicioContrato,
+        dataFimContrato: dataFimContrato,
         ativo: _ativo,
       );
 
@@ -546,6 +609,46 @@ class _AlunoFormScreenState extends State<AlunoFormScreen> {
                         inputFormatters: [AppInputFormatters.telefone()],
                         validator: (value) =>
                             value == null || value.trim().isEmpty ? 'Informe o telefone.' : null,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SectionCard(
+                    title: 'Contrato',
+                    icon: Icons.description_outlined,
+                    children: [
+                      TextFormField(
+                        controller: _contratoDataInicialController,
+                        readOnly: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Data inicial',
+                          prefixIcon: Icon(Icons.calendar_month_outlined),
+                        ),
+                        onTap: () => _selectDate(context, _contratoDataInicialController),
+                        validator: (value) {
+                          if (_contratoDataFinalController.text.isNotEmpty &&
+                              (value == null || value.trim().isEmpty)) {
+                            return 'Informe a data inicial.';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      TextFormField(
+                        controller: _contratoDataFinalController,
+                        readOnly: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Data final',
+                          prefixIcon: Icon(Icons.calendar_month_outlined),
+                        ),
+                        onTap: () => _selectDate(context, _contratoDataFinalController),
+                        validator: (value) {
+                          if (_contratoDataInicialController.text.isNotEmpty &&
+                              (value == null || value.trim().isEmpty)) {
+                            return 'Informe a data final.';
+                          }
+                          return null;
+                        },
                       ),
                     ],
                   ),

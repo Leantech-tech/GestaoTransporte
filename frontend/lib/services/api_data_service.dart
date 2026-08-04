@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/aluno.dart';
+import '../models/colaborador.dart';
 import '../models/empresa.dart';
 import '../models/escola.dart';
 import '../models/mensalidade.dart';
 import '../models/usuario.dart';
+import '../models/veiculo.dart';
 import 'api_client.dart';
 
 class ApiDataService extends ChangeNotifier {
@@ -111,6 +113,70 @@ class ApiDataService extends ChangeNotifier {
       throw _error(response);
     }
     return Empresa.fromJson(ApiClient.decodeBody(response));
+  }
+
+  Future<List<Colaborador>> listarColaboradores() async {
+    final response = await _client.get('/colaboradores');
+    if (response.statusCode != 200) {
+      throw _error(response);
+    }
+    final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+    return data.map((e) => Colaborador.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<Colaborador> salvarColaborador(Colaborador colaborador) async {
+    http.Response response;
+    if (colaborador.id.isEmpty) {
+      throw _msg('ID do colaborador não pode estar vazio');
+    }
+    if (colaborador.id.startsWith('new-')) {
+      response = await _client.post('/colaboradores', colaborador.toJson());
+    } else {
+      response = await _client.put('/colaboradores/${colaborador.id}', colaborador.toJson());
+    }
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw _error(response);
+    }
+    return Colaborador.fromJson(ApiClient.decodeBody(response));
+  }
+
+  Future<void> removerColaborador(String id) async {
+    final response = await _client.delete('/colaboradores/$id');
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw _error(response);
+    }
+  }
+
+  Future<List<Veiculo>> listarVeiculos() async {
+    final response = await _client.get('/veiculos');
+    if (response.statusCode != 200) {
+      throw _error(response);
+    }
+    final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+    return data.map((e) => Veiculo.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<Veiculo> salvarVeiculo(Veiculo veiculo) async {
+    http.Response response;
+    if (veiculo.id.isEmpty) {
+      throw _msg('ID do veículo não pode estar vazio');
+    }
+    if (veiculo.id.startsWith('new-')) {
+      response = await _client.post('/veiculos', veiculo.toJson());
+    } else {
+      response = await _client.put('/veiculos/${veiculo.id}', veiculo.toJson());
+    }
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw _error(response);
+    }
+    return Veiculo.fromJson(ApiClient.decodeBody(response));
+  }
+
+  Future<void> removerVeiculo(String id) async {
+    final response = await _client.delete('/veiculos/$id');
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw _error(response);
+    }
   }
 
   Future<Aluno> salvarAluno(Aluno aluno) async {

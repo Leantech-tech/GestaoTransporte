@@ -20,13 +20,15 @@ func (r *AlunoRepository) List(empresaID string) ([]models.Aluno, error) {
 	if empresaID == "" {
 		rows, err = r.db.Query(`
 			SELECT id, empresa_id, escola_id, nome, endereco, mensalidade, valor,
-			       dia_vencimento, responsavel_financeiro, responsavel_telefone, ativo, created_at, updated_at
+			       dia_vencimento, responsavel_financeiro, responsavel_telefone,
+			       data_inicio_contrato, data_fim_contrato, ativo, created_at, updated_at
 			FROM alunos ORDER BY nome
 		`)
 	} else {
 		rows, err = r.db.Query(`
 			SELECT id, empresa_id, escola_id, nome, endereco, mensalidade, valor,
-			       dia_vencimento, responsavel_financeiro, responsavel_telefone, ativo, created_at, updated_at
+			       dia_vencimento, responsavel_financeiro, responsavel_telefone,
+			       data_inicio_contrato, data_fim_contrato, ativo, created_at, updated_at
 			FROM alunos WHERE empresa_id = $1 ORDER BY nome
 		`, empresaID)
 	}
@@ -40,7 +42,7 @@ func (r *AlunoRepository) List(empresaID string) ([]models.Aluno, error) {
 		var a models.Aluno
 		if err := rows.Scan(&a.ID, &a.EmpresaID, &a.EscolaID, &a.Nome, &a.Endereco,
 			&a.Mensalidade, &a.Valor, &a.DiaVencimento, &a.ResponsavelFinanceiro,
-			&a.ResponsavelTelefone, &a.Ativo, &a.CreatedAt, &a.UpdatedAt); err != nil {
+			&a.ResponsavelTelefone, &a.DataInicioContrato, &a.DataFimContrato, &a.Ativo, &a.CreatedAt, &a.UpdatedAt); err != nil {
 			return nil, err
 		}
 		alunos = append(alunos, a)
@@ -51,13 +53,14 @@ func (r *AlunoRepository) List(empresaID string) ([]models.Aluno, error) {
 func (r *AlunoRepository) FindByID(id string) (*models.Aluno, error) {
 	row := r.db.QueryRow(`
 		SELECT id, empresa_id, escola_id, nome, endereco, mensalidade, valor,
-		       dia_vencimento, responsavel_financeiro, responsavel_telefone, ativo, created_at, updated_at
+		       dia_vencimento, responsavel_financeiro, responsavel_telefone,
+		       data_inicio_contrato, data_fim_contrato, ativo, created_at, updated_at
 		FROM alunos WHERE id = $1
 	`, id)
 	var a models.Aluno
 	err := row.Scan(&a.ID, &a.EmpresaID, &a.EscolaID, &a.Nome, &a.Endereco,
 		&a.Mensalidade, &a.Valor, &a.DiaVencimento, &a.ResponsavelFinanceiro,
-		&a.ResponsavelTelefone, &a.Ativo, &a.CreatedAt, &a.UpdatedAt)
+		&a.ResponsavelTelefone, &a.DataInicioContrato, &a.DataFimContrato, &a.Ativo, &a.CreatedAt, &a.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -67,21 +70,25 @@ func (r *AlunoRepository) FindByID(id string) (*models.Aluno, error) {
 func (r *AlunoRepository) Create(a *models.Aluno) error {
 	return r.db.QueryRow(`
 		INSERT INTO alunos (empresa_id, escola_id, nome, endereco, mensalidade, valor,
-		                    dia_vencimento, responsavel_financeiro, responsavel_telefone, ativo)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		                    dia_vencimento, responsavel_financeiro, responsavel_telefone,
+		                    data_inicio_contrato, data_fim_contrato, ativo)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING id, created_at, updated_at
 	`, a.EmpresaID, a.EscolaID, a.Nome, a.Endereco, a.Mensalidade, a.Valor,
-		a.DiaVencimento, a.ResponsavelFinanceiro, a.ResponsavelTelefone, a.Ativo).Scan(&a.ID, &a.CreatedAt, &a.UpdatedAt)
+		a.DiaVencimento, a.ResponsavelFinanceiro, a.ResponsavelTelefone,
+		a.DataInicioContrato, a.DataFimContrato, a.Ativo).Scan(&a.ID, &a.CreatedAt, &a.UpdatedAt)
 }
 
 func (r *AlunoRepository) Update(a *models.Aluno) error {
 	_, err := r.db.Exec(`
 		UPDATE alunos SET escola_id = $1, nome = $2, endereco = $3, mensalidade = $4,
 		                  valor = $5, dia_vencimento = $6, responsavel_financeiro = $7,
-		                  responsavel_telefone = $8, ativo = $9
-		WHERE id = $10
+		                  responsavel_telefone = $8, data_inicio_contrato = $9,
+		                  data_fim_contrato = $10, ativo = $11
+		WHERE id = $12
 	`, a.EscolaID, a.Nome, a.Endereco, a.Mensalidade, a.Valor, a.DiaVencimento,
-		a.ResponsavelFinanceiro, a.ResponsavelTelefone, a.Ativo, a.ID)
+		a.ResponsavelFinanceiro, a.ResponsavelTelefone, a.DataInicioContrato,
+		a.DataFimContrato, a.Ativo, a.ID)
 	return err
 }
 

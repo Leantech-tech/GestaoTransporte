@@ -9,6 +9,8 @@ class Aluno {
   int diaVencimento;
   String responsavelNome;
   String responsavelTelefone;
+  DateTime? dataInicioContrato;
+  DateTime? dataFimContrato;
   bool ativo;
 
   Aluno({
@@ -22,6 +24,8 @@ class Aluno {
     required this.diaVencimento,
     required this.responsavelNome,
     required this.responsavelTelefone,
+    this.dataInicioContrato,
+    this.dataFimContrato,
     this.ativo = true,
   });
 
@@ -37,6 +41,8 @@ class Aluno {
       diaVencimento: json['dia_vencimento'] as int,
       responsavelNome: json['responsavel_financeiro'] as String,
       responsavelTelefone: json['responsavel_telefone'] as String,
+      dataInicioContrato: json['data_inicio_contrato'] != null ? DateTime.parse(json['data_inicio_contrato'] as String) : null,
+      dataFimContrato: json['data_fim_contrato'] != null ? DateTime.parse(json['data_fim_contrato'] as String) : null,
       ativo: json['ativo'] as bool? ?? true,
     );
   }
@@ -52,6 +58,8 @@ class Aluno {
       'dia_vencimento': diaVencimento,
       'responsavel_financeiro': responsavelNome,
       'responsavel_telefone': responsavelTelefone,
+      'data_inicio_contrato': dataInicioContrato?.toIso8601String().split('T').first,
+      'data_fim_contrato': dataFimContrato?.toIso8601String().split('T').first,
       'ativo': ativo,
     };
   }

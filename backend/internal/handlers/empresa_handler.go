@@ -48,7 +48,7 @@ func (h *EmpresaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := r.PathValue("id")
+	id := pathValue(r, "id")
 	empresa, err := h.repo.FindByID(id)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "erro ao buscar empresa")
@@ -92,7 +92,7 @@ func (h *EmpresaHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := r.PathValue("id")
+	id := pathValue(r, "id")
 	existente, err := h.repo.FindByID(id)
 	if err != nil || existente == nil {
 		writeError(w, http.StatusNotFound, "empresa não encontrada")
@@ -129,7 +129,7 @@ func (h *EmpresaHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := r.PathValue("id")
+	id := pathValue(r, "id")
 	existente, err := h.repo.FindByID(id)
 	if err != nil || existente == nil {
 		writeError(w, http.StatusNotFound, "empresa não encontrada")
