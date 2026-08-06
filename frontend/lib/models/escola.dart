@@ -3,6 +3,8 @@ class Escola {
   final String empresaId;
   String nome;
   String enderecoCompleto;
+  String? cep;
+  String? numero;
   String? telefone;
   bool ativa;
 
@@ -11,6 +13,8 @@ class Escola {
     required this.empresaId,
     required this.nome,
     required this.enderecoCompleto,
+    this.cep,
+    this.numero,
     this.telefone,
     this.ativa = true,
   });
@@ -21,6 +25,8 @@ class Escola {
       empresaId: json['empresa_id'] as String,
       nome: json['nome'] as String,
       enderecoCompleto: json['endereco_completo'] as String,
+      cep: json['cep'] as String?,
+      numero: json['numero'] as String?,
       telefone: json['telefone'] as String?,
       ativa: json['ativa'] as bool? ?? true,
     );
@@ -30,6 +36,8 @@ class Escola {
     return {
       'nome': nome,
       'endereco_completo': enderecoCompleto,
+      if (cep != null && cep!.isNotEmpty) 'cep': cep,
+      if (numero != null && numero!.isNotEmpty) 'numero': numero,
       if (telefone != null) 'telefone': telefone,
       'ativa': ativa,
     };

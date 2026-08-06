@@ -66,12 +66,6 @@ class _UsuariosListScreenState extends State<UsuariosListScreen> {
     final podeEditar = isSuporte || (usuarioLogado?.perfil == Perfil.admin);
 
     return Scaffold(
-      floatingActionButton: podeEditar
-          ? FloatingActionButton(
-              onPressed: () => _abrirFormulario(context),
-              child: const Icon(Icons.add),
-            )
-          : null,
       body: _carregando
           ? const Center(child: CircularProgressIndicator())
           : _erro != null
@@ -454,7 +448,13 @@ class _UsuarioFormScreenState extends State<UsuarioFormScreen> {
                                 ))
                             .toList(),
                         onChanged: (value) {
-                          if (value != null) setState(() => _perfil = value);
+                          if (value == null) return;
+                          setState(() {
+                            _perfil = value;
+                            if (value != Perfil.suporte && _empresaId == null && widget.empresas.isNotEmpty) {
+                              _empresaId = widget.empresas.first.id;
+                            }
+                          });
                         },
                       ),
                       const SizedBox(height: 20),
@@ -466,10 +466,11 @@ class _UsuarioFormScreenState extends State<UsuarioFormScreen> {
                             prefixIcon: Icon(Icons.business_outlined),
                           ),
                           items: [
-                            const DropdownMenuItem<String?>(
-                              value: null,
-                              child: Text('Nenhuma (suporte)'),
-                            ),
+                            if (_perfil == Perfil.suporte)
+                              const DropdownMenuItem<String?>(
+                                value: null,
+                                child: Text('Nenhuma (suporte)'),
+                              ),
                             ...widget.empresas.map((e) => DropdownMenuItem(
                                   value: e.id,
                                   child: Text(e.nome),

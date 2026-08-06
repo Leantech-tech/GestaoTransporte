@@ -29,6 +29,7 @@ func main() {
 	alunoRepo := repository.NewAlunoRepository(db)
 	colaboradorRepo := repository.NewColaboradorRepository(db)
 	veiculoRepo := repository.NewVeiculoRepository(db)
+	linhaRepo := repository.NewLinhaRepository(db)
 	mensalidadeRepo := repository.NewMensalidadeRepository(db)
 
 	if err := seed(db, empresaRepo, usuarioRepo, escolaRepo, alunoRepo); err != nil {
@@ -42,6 +43,7 @@ func main() {
 	alunoHandler := handlers.NewAlunoHandler(alunoRepo)
 	colaboradorHandler := handlers.NewColaboradorHandler(colaboradorRepo)
 	veiculoHandler := handlers.NewVeiculoHandler(veiculoRepo)
+	linhaHandler := handlers.NewLinhaHandler(linhaRepo)
 	mensalidadeHandler := handlers.NewMensalidadeHandler(mensalidadeRepo, alunoRepo)
 
 	mux := http.NewServeMux()
@@ -215,6 +217,34 @@ func main() {
 			veiculoHandler.Update(w, r)
 		case http.MethodDelete:
 			veiculoHandler.Delete(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
+
+	// Linhas (GET list | POST create)
+	mux.Handle("/api/linhas", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			linhaHandler.List(w, r)
+		case http.MethodPost:
+			linhaHandler.Create(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
+
+	// Linhas by ID (PUT | DELETE)
+	mux.Handle("/api/linhas/", middleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/api/linhas/") {
+			http.NotFound(w, r)
+			return
+		}
+		switch r.Method {
+		case http.MethodPut:
+			linhaHandler.Update(w, r)
+		case http.MethodDelete:
+			linhaHandler.Delete(w, r)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/app_theme.dart';
+import '../../core/cep_endereco_field.dart';
 import '../../core/input_formatters.dart';
 import '../../core/section_card.dart';
 import '../../models/empresa.dart';
@@ -22,7 +23,9 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
   late final TextEditingController _nomeController;
   late final TextEditingController _cnpjController;
   late final TextEditingController _telefoneController;
+  late final TextEditingController _cepController;
   late final TextEditingController _enderecoController;
+  late final TextEditingController _numeroController;
   bool _ativa = true;
   bool _salvando = false;
 
@@ -36,7 +39,11 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
     _telefoneController = TextEditingController(
       text: widget.empresa?.telefone != null ? AppInputFormatters.formatTelefone(widget.empresa!.telefone!) : '',
     );
+    _cepController = TextEditingController(
+      text: widget.empresa?.cep != null ? AppInputFormatters.formatCep(widget.empresa!.cep!) : '',
+    );
     _enderecoController = TextEditingController(text: widget.empresa?.endereco ?? '');
+    _numeroController = TextEditingController(text: widget.empresa?.numero ?? '');
     _ativa = widget.empresa?.ativa ?? true;
   }
 
@@ -45,7 +52,9 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
     _nomeController.dispose();
     _cnpjController.dispose();
     _telefoneController.dispose();
+    _cepController.dispose();
     _enderecoController.dispose();
+    _numeroController.dispose();
     super.dispose();
   }
 
@@ -59,7 +68,9 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
         nome: _nomeController.text.trim(),
         cnpj: _cnpjController.text.trim().isEmpty ? null : _cnpjController.text.trim(),
         telefone: _telefoneController.text.trim().isEmpty ? null : _telefoneController.text.trim(),
+        cep: _cepController.text.trim().isEmpty ? null : AppInputFormatters.cepRaw(_cepController.text.trim()),
         endereco: _enderecoController.text.trim().isEmpty ? null : _enderecoController.text.trim(),
+        numero: _numeroController.text.trim().isEmpty ? null : _numeroController.text.trim(),
         ativa: _ativa,
       );
 
@@ -129,14 +140,11 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
                         inputFormatters: [AppInputFormatters.telefone()],
                       ),
                       const SizedBox(height: 20),
-                      TextFormField(
-                        controller: _enderecoController,
-                        decoration: const InputDecoration(
-                          labelText: 'Endereço',
-                          prefixIcon: Icon(Icons.location_on_outlined),
-                          alignLabelWithHint: true,
-                        ),
-                        maxLines: 3,
+                      CepEnderecoField(
+                        cepController: _cepController,
+                        enderecoController: _enderecoController,
+                        numeroController: _numeroController,
+                        enderecoLabel: 'Endereço',
                       ),
                     ],
                   ),

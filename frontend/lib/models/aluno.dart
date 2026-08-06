@@ -4,6 +4,8 @@ class Aluno {
   String escolaId;
   String nome;
   String endereco;
+  String? cep;
+  String? numero;
   double mensalidade;
   double valor;
   int diaVencimento;
@@ -19,6 +21,8 @@ class Aluno {
     required this.escolaId,
     required this.nome,
     required this.endereco,
+    this.cep,
+    this.numero,
     this.mensalidade = 0,
     this.valor = 0,
     required this.diaVencimento,
@@ -36,6 +40,8 @@ class Aluno {
       escolaId: json['escola_id'] as String,
       nome: json['nome'] as String,
       endereco: json['endereco'] as String,
+      cep: json['cep'] as String?,
+      numero: json['numero'] as String?,
       mensalidade: (json['mensalidade'] as num).toDouble(),
       valor: (json['valor'] as num).toDouble(),
       diaVencimento: json['dia_vencimento'] as int,
@@ -53,6 +59,8 @@ class Aluno {
       'escola_id': escolaId,
       'nome': nome,
       'endereco': endereco,
+      if (cep != null && cep!.isNotEmpty) 'cep': cep,
+      if (numero != null && numero!.isNotEmpty) 'numero': numero,
       'mensalidade': mensalidade,
       'valor': valor,
       'dia_vencimento': diaVencimento,

@@ -7,6 +7,7 @@ import '../models/aluno.dart';
 import '../models/colaborador.dart';
 import '../models/empresa.dart';
 import '../models/escola.dart';
+import '../models/linha.dart';
 import '../models/mensalidade.dart';
 import '../models/usuario.dart';
 import '../models/veiculo.dart';
@@ -174,6 +175,38 @@ class ApiDataService extends ChangeNotifier {
 
   Future<void> removerVeiculo(String id) async {
     final response = await _client.delete('/veiculos/$id');
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw _error(response);
+    }
+  }
+
+  Future<List<Linha>> listarLinhas() async {
+    final response = await _client.get('/linhas');
+    if (response.statusCode != 200) {
+      throw _error(response);
+    }
+    final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+    return data.map((e) => Linha.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<Linha> salvarLinha(Linha linha) async {
+    http.Response response;
+    if (linha.id.isEmpty) {
+      throw _msg('ID da linha não pode estar vazio');
+    }
+    if (linha.id.startsWith('new-')) {
+      response = await _client.post('/linhas', linha.toJson());
+    } else {
+      response = await _client.put('/linhas/${linha.id}', linha.toJson());
+    }
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw _error(response);
+    }
+    return Linha.fromJson(ApiClient.decodeBody(response));
+  }
+
+  Future<void> removerLinha(String id) async {
+    final response = await _client.delete('/linhas/$id');
     if (response.statusCode != 204 && response.statusCode != 200) {
       throw _error(response);
     }

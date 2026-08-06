@@ -15,7 +15,9 @@ type Empresa struct {
 	Nome      string    `json:"nome"`
 	CNPJ      *string   `json:"cnpj,omitempty"`
 	Telefone  *string   `json:"telefone,omitempty"`
+	CEP       *string   `json:"cep,omitempty"`
 	Endereco  *string   `json:"endereco,omitempty"`
+	Numero    *string   `json:"numero,omitempty"`
 	Ativa     bool      `json:"ativa"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -38,6 +40,8 @@ type Escola struct {
 	EmpresaID        string    `json:"empresa_id"`
 	Nome             string    `json:"nome"`
 	EnderecoCompleto string    `json:"endereco_completo"`
+	CEP              *string   `json:"cep,omitempty"`
+	Numero           *string   `json:"numero,omitempty"`
 	Telefone         *string   `json:"telefone,omitempty"`
 	Ativa            bool      `json:"ativa"`
 	CreatedAt        time.Time `json:"created_at"`
@@ -50,6 +54,8 @@ type Aluno struct {
 	EscolaID              string     `json:"escola_id"`
 	Nome                  string     `json:"nome"`
 	Endereco              string     `json:"endereco"`
+	CEP                   *string    `json:"cep,omitempty"`
+	Numero                *string    `json:"numero,omitempty"`
 	Mensalidade           float64    `json:"mensalidade"`
 	Valor                 float64    `json:"valor"`
 	DiaVencimento         int        `json:"dia_vencimento"`

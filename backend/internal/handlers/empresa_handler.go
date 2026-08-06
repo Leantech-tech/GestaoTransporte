@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/gestao-transporte/backend/internal/auth"
@@ -35,6 +36,7 @@ func (h *EmpresaHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	empresas, err := h.repo.ListAll()
 	if err != nil {
+		log.Printf("erro ao listar empresas: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro ao listar empresas")
 		return
 	}
@@ -51,6 +53,7 @@ func (h *EmpresaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	id := pathValue(r, "id")
 	empresa, err := h.repo.FindByID(id)
 	if err != nil {
+		log.Printf("erro ao buscar empresa: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro ao buscar empresa")
 		return
 	}
@@ -79,6 +82,7 @@ func (h *EmpresaHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.repo.Create(&e); err != nil {
+		log.Printf("erro ao criar empresa: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro ao criar empresa")
 		return
 	}
@@ -112,10 +116,13 @@ func (h *EmpresaHandler) Update(w http.ResponseWriter, r *http.Request) {
 	existente.Nome = req.Nome
 	existente.CNPJ = req.CNPJ
 	existente.Telefone = req.Telefone
+	existente.CEP = req.CEP
 	existente.Endereco = req.Endereco
+	existente.Numero = req.Numero
 	existente.Ativa = req.Ativa
 
 	if err := h.repo.Update(existente); err != nil {
+		log.Printf("erro ao atualizar empresa: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro ao atualizar empresa")
 		return
 	}
@@ -137,6 +144,7 @@ func (h *EmpresaHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.repo.Delete(id); err != nil {
+		log.Printf("erro ao excluir empresa: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro ao excluir empresa")
 		return
 	}

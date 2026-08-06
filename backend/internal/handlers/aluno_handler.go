@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -23,6 +24,8 @@ type AlunoRequest struct {
 	EscolaID              string  `json:"escola_id"`
 	Nome                  string  `json:"nome"`
 	Endereco              string  `json:"endereco"`
+	CEP                   *string `json:"cep,omitempty"`
+	Numero                *string `json:"numero,omitempty"`
 	Mensalidade           float64 `json:"mensalidade"`
 	Valor                 float64 `json:"valor"`
 	DiaVencimento         int     `json:"dia_vencimento"`
@@ -37,6 +40,7 @@ func (h *AlunoHandler) List(w http.ResponseWriter, r *http.Request) {
 	empresaID := empresaIDFromClaims(r)
 	alunos, err := h.repo.List(empresaID)
 	if err != nil {
+		log.Printf("erro ao listar alunos: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro ao listar alunos")
 		return
 	}
@@ -99,6 +103,8 @@ func (h *AlunoHandler) Create(w http.ResponseWriter, r *http.Request) {
 		EscolaID:              req.EscolaID,
 		Nome:                  req.Nome,
 		Endereco:              req.Endereco,
+		CEP:                   req.CEP,
+		Numero:                req.Numero,
 		Mensalidade:           req.Mensalidade,
 		Valor:                 req.Valor,
 		DiaVencimento:         req.DiaVencimento,
@@ -109,6 +115,7 @@ func (h *AlunoHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Ativo:                 req.Ativo,
 	}
 	if err := h.repo.Create(a); err != nil {
+		log.Printf("erro ao criar aluno: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro ao criar aluno")
 		return
 	}
@@ -162,6 +169,8 @@ func (h *AlunoHandler) Update(w http.ResponseWriter, r *http.Request) {
 	existente.EscolaID = req.EscolaID
 	existente.Nome = req.Nome
 	existente.Endereco = req.Endereco
+	existente.CEP = req.CEP
+	existente.Numero = req.Numero
 	existente.Mensalidade = req.Mensalidade
 	existente.Valor = req.Valor
 	existente.DiaVencimento = req.DiaVencimento
@@ -192,6 +201,7 @@ func (h *AlunoHandler) Update(w http.ResponseWriter, r *http.Request) {
 	existente.Ativo = req.Ativo
 
 	if err := h.repo.Update(existente); err != nil {
+		log.Printf("erro ao atualizar aluno: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro ao atualizar aluno")
 		return
 	}
@@ -217,6 +227,7 @@ func (h *AlunoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.repo.Delete(id); err != nil {
+		log.Printf("erro ao excluir aluno: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro ao excluir aluno")
 		return
 	}

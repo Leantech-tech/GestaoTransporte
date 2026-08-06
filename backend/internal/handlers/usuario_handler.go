@@ -66,6 +66,10 @@ func (h *UsuarioHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	empresaID := ""
 	if claims.Perfil == string(models.PerfilAdmin) {
+		if claims.EmpresaID == "" {
+			writeError(w, http.StatusForbidden, "administrador sem empresa vinculada")
+			return
+		}
 		empresaID = claims.EmpresaID
 	}
 

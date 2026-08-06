@@ -16,7 +16,7 @@ func NewEmpresaRepository(db *sql.DB) *EmpresaRepository {
 
 func (r *EmpresaRepository) ListAll() ([]models.Empresa, error) {
 	rows, err := r.db.Query(`
-		SELECT id, nome, cnpj, telefone, endereco, ativa, created_at, updated_at
+		SELECT id, nome, cnpj, telefone, cep, endereco, numero, ativa, created_at, updated_at
 		FROM empresas ORDER BY nome
 	`)
 	if err != nil {
@@ -27,7 +27,7 @@ func (r *EmpresaRepository) ListAll() ([]models.Empresa, error) {
 	empresas := make([]models.Empresa, 0)
 	for rows.Next() {
 		var e models.Empresa
-		if err := rows.Scan(&e.ID, &e.Nome, &e.CNPJ, &e.Telefone, &e.Endereco, &e.Ativa, &e.CreatedAt, &e.UpdatedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.Nome, &e.CNPJ, &e.Telefone, &e.CEP, &e.Endereco, &e.Numero, &e.Ativa, &e.CreatedAt, &e.UpdatedAt); err != nil {
 			return nil, err
 		}
 		empresas = append(empresas, e)
@@ -37,11 +37,11 @@ func (r *EmpresaRepository) ListAll() ([]models.Empresa, error) {
 
 func (r *EmpresaRepository) FindByID(id string) (*models.Empresa, error) {
 	row := r.db.QueryRow(`
-		SELECT id, nome, cnpj, telefone, endereco, ativa, created_at, updated_at
+		SELECT id, nome, cnpj, telefone, cep, endereco, numero, ativa, created_at, updated_at
 		FROM empresas WHERE id = $1
 	`, id)
 	var e models.Empresa
-	err := row.Scan(&e.ID, &e.Nome, &e.CNPJ, &e.Telefone, &e.Endereco, &e.Ativa, &e.CreatedAt, &e.UpdatedAt)
+	err := row.Scan(&e.ID, &e.Nome, &e.CNPJ, &e.Telefone, &e.CEP, &e.Endereco, &e.Numero, &e.Ativa, &e.CreatedAt, &e.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -50,17 +50,17 @@ func (r *EmpresaRepository) FindByID(id string) (*models.Empresa, error) {
 
 func (r *EmpresaRepository) Create(e *models.Empresa) error {
 	return r.db.QueryRow(`
-		INSERT INTO empresas (nome, cnpj, telefone, endereco, ativa)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO empresas (nome, cnpj, telefone, cep, endereco, numero, ativa)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, created_at, updated_at
-	`, e.Nome, e.CNPJ, e.Telefone, e.Endereco, e.Ativa).Scan(&e.ID, &e.CreatedAt, &e.UpdatedAt)
+	`, e.Nome, e.CNPJ, e.Telefone, e.CEP, e.Endereco, e.Numero, e.Ativa).Scan(&e.ID, &e.CreatedAt, &e.UpdatedAt)
 }
 
 func (r *EmpresaRepository) Update(e *models.Empresa) error {
 	_, err := r.db.Exec(`
-		UPDATE empresas SET nome = $1, cnpj = $2, telefone = $3, endereco = $4, ativa = $5
-		WHERE id = $6
-	`, e.Nome, e.CNPJ, e.Telefone, e.Endereco, e.Ativa, e.ID)
+		UPDATE empresas SET nome = $1, cnpj = $2, telefone = $3, cep = $4, endereco = $5, numero = $6, ativa = $7
+		WHERE id = $8
+	`, e.Nome, e.CNPJ, e.Telefone, e.CEP, e.Endereco, e.Numero, e.Ativa, e.ID)
 	return err
 }
 

@@ -7,9 +7,20 @@ class AppInputFormatters {
 
   static TextInputFormatter cpf() => _CpfFormatter();
 
+  static TextInputFormatter cep() => _CepFormatter();
+
   static TextInputFormatter moeda() => _MoedaFormatter();
 
   static TextInputFormatter placa() => _PlacaFormatter();
+
+  static String formatCep(String value) {
+    return _CepFormatter().formatEditUpdate(
+      const TextEditingValue(),
+      TextEditingValue(text: value),
+    ).text;
+  }
+
+  static String cepRaw(String value) => value.replaceAll(RegExp(r'[^0-9]'), '');
 
   static String placaRaw(String value) => value.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
 
@@ -131,7 +142,7 @@ class _CpfFormatter extends TextInputFormatter {
     String formatted = '';
     if (digits.length >= 4) {
       formatted = '${digits.substring(0, 3)}.';
-      if (digits.length > 3) formatted += '${digits.substring(3, digits.length < 6 ? digits.length : 6)}';
+      if (digits.length > 3) formatted += digits.substring(3, digits.length < 6 ? digits.length : 6);
       if (digits.length >= 6) formatted += '.${digits.substring(6, digits.length < 9 ? digits.length : 9)}';
       if (digits.length >= 9) formatted += '-${digits.substring(9)}';
     } else {
@@ -185,6 +196,24 @@ class _MoedaFormatter extends TextInputFormatter {
       (match) => '.',
     );
     final formatted = 'R\$ $reaisFormatted,${c.toString().padLeft(2, '0')}';
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+class _CepFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    var digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length > 8) digits = digits.substring(0, 8);
+
+    String formatted = digits;
+    if (digits.length > 5) {
+      formatted = '${digits.substring(0, 5)}-${digits.substring(5)}';
+    }
 
     return TextEditingValue(
       text: formatted,

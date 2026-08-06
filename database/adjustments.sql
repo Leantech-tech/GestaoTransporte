@@ -2,17 +2,23 @@
 -- Ajustes e novas tabelas para o sistema de Gestão de Transporte
 -- ============================================================
 
--- 1. Novas colunas para cadastro de endereço e CEP
+-- 1. Novas colunas para cadastro de endereço, CEP e número
 ALTER TABLE empresas
     ADD COLUMN IF NOT EXISTS cep VARCHAR(9);
+ALTER TABLE empresas
+    ADD COLUMN IF NOT EXISTS numero VARCHAR(20);
 
 ALTER TABLE escolas
     ADD COLUMN IF NOT EXISTS telefone VARCHAR(20);
 ALTER TABLE escolas
     ADD COLUMN IF NOT EXISTS cep VARCHAR(9);
+ALTER TABLE escolas
+    ADD COLUMN IF NOT EXISTS numero VARCHAR(20);
 
 ALTER TABLE alunos
     ADD COLUMN IF NOT EXISTS cep VARCHAR(9);
+ALTER TABLE alunos
+    ADD COLUMN IF NOT EXISTS numero VARCHAR(20);
 ALTER TABLE alunos
     ADD COLUMN IF NOT EXISTS data_inicio_contrato DATE;
 ALTER TABLE alunos

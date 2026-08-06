@@ -53,10 +53,6 @@ class _EmpresasListScreenState extends State<EmpresasListScreen> {
     }
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _abrirFormulario(context),
-        child: const Icon(Icons.add),
-      ),
       body: _carregando
           ? const Center(child: CircularProgressIndicator())
           : _erro != null
@@ -103,7 +99,7 @@ class _EmpresasListScreenState extends State<EmpresasListScreen> {
                         child: _empresas.isEmpty
                             ? const Center(child: Text('Nenhuma empresa cadastrada.'))
                             : ScrollableDataTable(
-                                columnCount: 5,
+                                columnCount: 7,
                                 onRefresh: _carregar,
                                 child: Card(
                                   elevation: 0,
@@ -117,6 +113,8 @@ class _EmpresasListScreenState extends State<EmpresasListScreen> {
                                       const DataColumn(label: Text('Nome', style: TextStyle(fontWeight: FontWeight.bold))),
                                       const DataColumn(label: Text('CNPJ', style: TextStyle(fontWeight: FontWeight.bold))),
                                       const DataColumn(label: Text('Telefone', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      const DataColumn(label: Text('Endereço', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      const DataColumn(label: Text('Número', style: TextStyle(fontWeight: FontWeight.bold))),
                                       const DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
                                       const DataColumn(label: Text('Ações', style: TextStyle(fontWeight: FontWeight.bold))),
                                     ],
@@ -134,6 +132,8 @@ class _EmpresasListScreenState extends State<EmpresasListScreen> {
                                           ),
                                           DataCell(Text(empresa.cnpj ?? '-')),
                                           DataCell(Text(empresa.telefone ?? '-')),
+                                          DataCell(Text(empresa.endereco ?? '-')),
+                                          DataCell(Text(empresa.numero ?? '-')),
                                           DataCell(
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

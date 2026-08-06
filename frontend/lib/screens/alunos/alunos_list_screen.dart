@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/app_theme.dart';
+import '../../core/cep_endereco_field.dart';
 import '../../core/input_formatters.dart';
 import '../../core/scrollable_data_table.dart';
 import '../../core/section_card.dart';
@@ -54,12 +55,6 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
     final currency = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
 
     return Scaffold(
-      floatingActionButton: isSuporte
-          ? null
-          : FloatingActionButton(
-              onPressed: () => _abrirFormulario(context),
-              child: const Icon(Icons.add),
-            ),
       body: _carregando
           ? const Center(child: CircularProgressIndicator())
           : _erro != null
@@ -106,7 +101,7 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
                         child: _alunos.isEmpty
                             ? const Center(child: Text('Nenhum aluno cadastrado.'))
                             : ScrollableDataTable(
-                                columnCount: isSuporte ? 9 : 10,
+                                columnCount: isSuporte ? 10 : 11,
                                 onRefresh: _carregar,
                                 child: Card(
                                   elevation: 0,
@@ -119,6 +114,7 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
                                     columns: [
                                       const DataColumn(label: Text('Nome do Aluno', style: TextStyle(fontWeight: FontWeight.bold))),
                                       const DataColumn(label: Text('Endereço', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      const DataColumn(label: Text('Número', style: TextStyle(fontWeight: FontWeight.bold))),
                                       const DataColumn(label: Text('Contrato', style: TextStyle(fontWeight: FontWeight.bold))),
                                       const DataColumn(label: Text('Mensalidade', style: TextStyle(fontWeight: FontWeight.bold))),
                                       const DataColumn(label: Text('Valor', style: TextStyle(fontWeight: FontWeight.bold))),
@@ -142,6 +138,7 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
                                             ),
                                           ),
                                           DataCell(Text(aluno.endereco)),
+                                          DataCell(Text(aluno.numero ?? '-')),
                                           DataCell(Text(aluno.dataInicioContrato != null && aluno.dataFimContrato != null
                                               ? '${DateFormat('dd/MM/yyyy').format(aluno.dataInicioContrato!)} - ${DateFormat('dd/MM/yyyy').format(aluno.dataFimContrato!)}'
                                               : '-')),
@@ -255,7 +252,9 @@ class AlunoFormScreen extends StatefulWidget {
 class _AlunoFormScreenState extends State<AlunoFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nomeController;
+  late final TextEditingController _cepController;
   late final TextEditingController _enderecoController;
+  late final TextEditingController _numeroController;
   late final TextEditingController _mensalidadeController;
   late final TextEditingController _valorController;
   late final TextEditingController _diaVencimentoController;
@@ -275,7 +274,11 @@ class _AlunoFormScreenState extends State<AlunoFormScreen> {
     super.initState();
     final aluno = widget.aluno;
     _nomeController = TextEditingController(text: aluno?.nome ?? '');
+    _cepController = TextEditingController(
+      text: aluno?.cep != null ? AppInputFormatters.formatCep(aluno!.cep!) : '',
+    );
     _enderecoController = TextEditingController(text: aluno?.endereco ?? '');
+    _numeroController = TextEditingController(text: aluno?.numero ?? '');
     _mensalidadeController = TextEditingController(
       text: aluno != null ? AppInputFormatters.moedaText(aluno.mensalidade) : '',
     );
@@ -330,7 +333,9 @@ class _AlunoFormScreenState extends State<AlunoFormScreen> {
   @override
   void dispose() {
     _nomeController.dispose();
+    _cepController.dispose();
     _enderecoController.dispose();
+    _numeroController.dispose();
     _mensalidadeController.dispose();
     _valorController.dispose();
     _diaVencimentoController.dispose();
@@ -365,7 +370,7 @@ class _AlunoFormScreenState extends State<AlunoFormScreen> {
                   onPrimary: Colors.white,
                   surface: Colors.white,
                 ),
-            dialogBackgroundColor: AppTheme.surface,
+            dialogTheme: DialogThemeData(backgroundColor: AppTheme.surface),
           ),
           child: child!,
         );
@@ -420,6 +425,8 @@ class _AlunoFormScreenState extends State<AlunoFormScreen> {
         escolaId: _escolaIdSelecionada!,
         nome: _nomeController.text.trim(),
         endereco: _enderecoController.text.trim(),
+        cep: _cepController.text.trim().isEmpty ? null : AppInputFormatters.cepRaw(_cepController.text.trim()),
+        numero: _numeroController.text.trim().isEmpty ? null : _numeroController.text.trim(),
         mensalidade: AppInputFormatters.moedaDouble(_mensalidadeController.text),
         valor: AppInputFormatters.moedaDouble(_valorController.text),
         diaVencimento: int.parse(_diaVencimentoController.text.trim()),
@@ -480,15 +487,12 @@ class _AlunoFormScreenState extends State<AlunoFormScreen> {
                             value == null || value.trim().isEmpty ? 'Informe o nome.' : null,
                       ),
                       const SizedBox(height: 20),
-                      TextFormField(
-                        controller: _enderecoController,
-                        decoration: const InputDecoration(
-                          labelText: 'Endereço do aluno',
-                          prefixIcon: Icon(Icons.location_on_outlined),
-                          alignLabelWithHint: true,
-                        ),
-                        maxLines: 2,
-                        validator: (value) =>
+                      CepEnderecoField(
+                        cepController: _cepController,
+                        enderecoController: _enderecoController,
+                        numeroController: _numeroController,
+                        enderecoLabel: 'Endereço do aluno',
+                        enderecoValidator: (value) =>
                             value == null || value.trim().isEmpty ? 'Informe o endereço.' : null,
                       ),
                       const SizedBox(height: 20),

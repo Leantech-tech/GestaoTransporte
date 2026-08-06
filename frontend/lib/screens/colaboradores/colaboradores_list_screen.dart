@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
@@ -20,12 +19,21 @@ class ColaboradoresListScreen extends StatefulWidget {
 class _ColaboradoresListScreenState extends State<ColaboradoresListScreen> {
   bool _carregando = true;
   List<Colaborador> _colaboradores = [];
+  List<Colaborador> _colaboradoresFiltrados = [];
   String? _erro;
+
+  final TextEditingController _filtroController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _carregar();
+  }
+
+  @override
+  void dispose() {
+    _filtroController.dispose();
+    super.dispose();
   }
 
   Future<void> _carregar() async {
@@ -34,12 +42,39 @@ class _ColaboradoresListScreenState extends State<ColaboradoresListScreen> {
       final colaboradores = await context.read<ApiDataService>().listarColaboradores();
       setState(() {
         _colaboradores = colaboradores;
+        _colaboradoresFiltrados = colaboradores;
         _erro = null;
       });
     } catch (e) {
       setState(() => _erro = e.toString());
     } finally {
       setState(() => _carregando = false);
+    }
+  }
+
+  void _aplicarFiltro() {
+    final filtro = _filtroController.text.toLowerCase().trim();
+    setState(() {
+      if (filtro.isEmpty) {
+        _colaboradoresFiltrados = List.from(_colaboradores);
+        return;
+      }
+      _colaboradoresFiltrados = _colaboradores.where((c) {
+        return c.nome.toLowerCase().contains(filtro) ||
+            c.tipo.toLowerCase().contains(filtro) ||
+            _labelTipo(c.tipo).toLowerCase().contains(filtro);
+      }).toList();
+    });
+  }
+
+  String _labelTipo(String tipo) {
+    switch (tipo) {
+      case 'professor':
+        return 'Professor(a)';
+      case 'monitor':
+        return 'Monitor(a)';
+      default:
+        return 'Motorista';
     }
   }
 
@@ -87,10 +122,28 @@ class _ColaboradoresListScreenState extends State<ColaboradoresListScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: _filtroController,
+                        decoration: InputDecoration(
+                          labelText: 'Pesquisar por nome ou tipo',
+                          prefixIcon: const Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                        ),
+                        onChanged: (_) => _aplicarFiltro(),
+                      ),
+                      const SizedBox(height: 16),
                       Expanded(
-                        child: _colaboradores.isEmpty
-                            ? const Center(child: Text('Nenhum colaborador cadastrado.'))
+                        child: _colaboradoresFiltrados.isEmpty
+                            ? const Center(child: Text('Nenhum colaborador encontrado.'))
                             : ScrollableDataTable(
                                 columnCount: 6,
                                 onRefresh: _carregar,
@@ -110,7 +163,7 @@ class _ColaboradoresListScreenState extends State<ColaboradoresListScreen> {
                                       DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
                                       DataColumn(label: Text('Ações', style: TextStyle(fontWeight: FontWeight.bold))),
                                     ],
-                                    rows: _colaboradores.map((colaborador) {
+                                    rows: _colaboradoresFiltrados.map((colaborador) {
                                       return DataRow(
                                         cells: [
                                           DataCell(
@@ -355,7 +408,7 @@ class _ColaboradorFormScreenState extends State<ColaboradorFormScreen> {
         ),
         const SizedBox(height: 20),
         DropdownButtonFormField<String>(
-          value: _tipo,
+          initialValue: _tipo,
           decoration: const InputDecoration(
             labelText: 'Tipo de colaborador',
             prefixIcon: Icon(Icons.work_outline),

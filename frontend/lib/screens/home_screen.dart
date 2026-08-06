@@ -16,6 +16,7 @@ import 'financeiro/gerar_mensalidade_screen.dart';
 import 'financeiro/receber_mensalidade_screen.dart';
 import 'colaboradores/colaboradores_list_screen.dart';
 import 'empresas/empresas_list_screen.dart';
+import 'linhas/linhas_list_screen.dart';
 import 'usuarios/usuarios_list_screen.dart';
 import 'veiculos/veiculos_list_screen.dart';
 import 'login_screen.dart';
@@ -124,6 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // 8 = Usuários
   // 9 = Colaboradores
   // 10 = Veículos
+  // 11 = Linhas
 
   String get _tituloAppBar {
     switch (_selectedIndex) {
@@ -148,6 +150,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return 'Gestão de Colaboradores';
       case 10:
         return 'Gestão de Veículos';
+      case 11:
+        return 'Gestão de Linhas';
       default:
         return '';
     }
@@ -169,7 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int get _bottomNavIndex {
     if (_selectedIndex <= 3) return _selectedIndex;
     if (_selectedIndex == 4 || _selectedIndex == 5) return 3;
-    if (_selectedIndex == 6 || _selectedIndex == 7 || _selectedIndex == 8 || _selectedIndex == 9 || _selectedIndex == 10) return 4;
+    if (_selectedIndex == 6 || _selectedIndex == 7 || _selectedIndex == 8 || _selectedIndex == 9 || _selectedIndex == 10 || _selectedIndex == 11) return 4;
     return 0;
   }
 
@@ -191,11 +195,13 @@ class _HomeScreenState extends State<HomeScreen> {
         onEmpresas: () => setState(() => _selectedIndex = 7),
         onUsuarios: () => setState(() => _selectedIndex = 8),
         onColaboradores: () => setState(() => _selectedIndex = 9),
+        onLinhas: () => setState(() => _selectedIndex = 11),
       ),
       const EmpresasListScreen(),
       const UsuariosListScreen(),
       const ColaboradoresListScreen(),
       const VeiculosListScreen(),
+      const LinhasListScreen(),
     ];
 
     if (isWide) {
@@ -214,7 +220,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   _TopNavbar(
                     title: _tituloAppBar,
-                    onLogout: _logout,
                     onRefresh: _carregarDados,
                     onAdd: _acaoAdicionar,
                   ),
@@ -530,11 +535,13 @@ class _AdminHubScreen extends StatelessWidget {
   final VoidCallback onEmpresas;
   final VoidCallback onColaboradores;
   final VoidCallback onUsuarios;
+  final VoidCallback onLinhas;
 
   const _AdminHubScreen({
     required this.onEmpresas,
     required this.onColaboradores,
     required this.onUsuarios,
+    required this.onLinhas,
   });
 
   @override
@@ -586,6 +593,14 @@ class _AdminHubScreen extends StatelessWidget {
                   subtitle: const Text('Acessos e vínculos com empresas'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: onUsuarios,
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.route, color: AppTheme.primary),
+                  title: const Text('Linhas', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Rotas vinculadas a colaboradores e veículos'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: onLinhas,
                 ),
               ],
             ),
@@ -681,99 +696,114 @@ class _CustomSidebar extends StatelessWidget {
           const SizedBox(height: 16),
 
           // Itens de Menu
-          _SidebarItem(
-            icon: Icons.grid_view_rounded,
-            label: 'Dashboard',
-            isSelected: selectedIndex == 0,
-            onTap: () => onDestinationSelected(0),
-          ),
-          _SidebarItem(
-            icon: Icons.domain_rounded,
-            label: 'Escolas',
-            isSelected: selectedIndex == 1,
-            onTap: () => onDestinationSelected(1),
-          ),
-          _SidebarItem(
-            icon: Icons.groups_rounded,
-            label: 'Alunos',
-            isSelected: selectedIndex == 2,
-            onTap: () => onDestinationSelected(2),
-          ),
-          Builder(
-            builder: (context) {
-              final auth = context.watch<AuthProvider>();
-              final isSuporte = auth.usuario?.isSuporte ?? false;
-              final isAdmin = auth.usuario?.perfil == Perfil.admin;
-              if (!isSuporte && !isAdmin) return const SizedBox.shrink();
-
-              return Column(
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _SidebarItem(
-                    icon: Icons.person_outline,
-                    label: 'Colaboradores',
-                    isSelected: selectedIndex == 9,
-                    onTap: () => onDestinationSelected(9),
+                    icon: Icons.grid_view_rounded,
+                    label: 'Dashboard',
+                    isSelected: selectedIndex == 0,
+                    onTap: () => onDestinationSelected(0),
                   ),
                   _SidebarItem(
-                    icon: Icons.directions_car_rounded,
-                    label: 'Veículos',
-                    isSelected: selectedIndex == 10,
-                    onTap: () => onDestinationSelected(10),
+                    icon: Icons.domain_rounded,
+                    label: 'Escolas',
+                    isSelected: selectedIndex == 1,
+                    onTap: () => onDestinationSelected(1),
+                  ),
+                  _SidebarItem(
+                    icon: Icons.groups_rounded,
+                    label: 'Alunos',
+                    isSelected: selectedIndex == 2,
+                    onTap: () => onDestinationSelected(2),
+                  ),
+                  Builder(
+                    builder: (context) {
+                      final auth = context.watch<AuthProvider>();
+                      final isSuporte = auth.usuario?.isSuporte ?? false;
+                      final isAdmin = auth.usuario?.perfil == Perfil.admin;
+                      if (!isSuporte && !isAdmin) return const SizedBox.shrink();
+
+                      return Column(
+                        children: [
+                          _SidebarItem(
+                            icon: Icons.person_outline,
+                            label: 'Colaboradores',
+                            isSelected: selectedIndex == 9,
+                            onTap: () => onDestinationSelected(9),
+                          ),
+                          _SidebarItem(
+                            icon: Icons.directions_car_rounded,
+                            label: 'Veículos',
+                            isSelected: selectedIndex == 10,
+                            onTap: () => onDestinationSelected(10),
+                          ),
+                          _SidebarItem(
+                            icon: Icons.route_rounded,
+                            label: 'Linhas',
+                            isSelected: selectedIndex == 11,
+                            onTap: () => onDestinationSelected(11),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  _ExpandableSidebarItem(
+                    icon: Icons.account_balance_wallet_rounded,
+                    label: 'Financeiro',
+                    isExpanded: financeiroSelecionado,
+                    isSelected: financeiroSelecionado,
+                    onTap: () => onDestinationSelected(4),
+                    children: [
+                      _SidebarSubItem(
+                        label: 'Gerar mensalidade',
+                        isSelected: selectedIndex == 4,
+                        onTap: () => onDestinationSelected(4),
+                      ),
+                      _SidebarSubItem(
+                        label: 'Receber mensalidade',
+                        isSelected: selectedIndex == 5,
+                        onTap: () => onDestinationSelected(5),
+                      ),
+                    ],
+                  ),
+                  Builder(
+                    builder: (context) {
+                      final auth = context.watch<AuthProvider>();
+                      final isSuporte = auth.usuario?.isSuporte ?? false;
+                      final isAdmin = auth.usuario?.perfil == Perfil.admin;
+                      if (!isSuporte && !isAdmin) return const SizedBox.shrink();
+                      final adminSelecionado = selectedIndex == 7 || selectedIndex == 8;
+                      final primeiroIndiceAdmin = isSuporte ? 7 : 8;
+                      return _ExpandableSidebarItem(
+                        icon: Icons.admin_panel_settings_rounded,
+                        label: 'Administração',
+                        isExpanded: adminSelecionado,
+                        isSelected: adminSelecionado,
+                        onTap: () => onDestinationSelected(primeiroIndiceAdmin),
+                        children: [
+                          if (isSuporte)
+                            _SidebarSubItem(
+                              label: 'Empresas',
+                              isSelected: selectedIndex == 7,
+                              onTap: () => onDestinationSelected(7),
+                            ),
+                          _SidebarSubItem(
+                            label: 'Usuários',
+                            isSelected: selectedIndex == 8,
+                            onTap: () => onDestinationSelected(8),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ],
-              );
-            },
-          ),
-          _ExpandableSidebarItem(
-            icon: Icons.account_balance_wallet_rounded,
-            label: 'Financeiro',
-            isExpanded: financeiroSelecionado,
-            isSelected: financeiroSelecionado,
-            onTap: () => onDestinationSelected(4),
-            children: [
-              _SidebarSubItem(
-                label: 'Gerar mensalidade',
-                isSelected: selectedIndex == 4,
-                onTap: () => onDestinationSelected(4),
               ),
-              _SidebarSubItem(
-                label: 'Receber mensalidade',
-                isSelected: selectedIndex == 5,
-                onTap: () => onDestinationSelected(5),
-              ),
-            ],
-          ),
-          Builder(
-            builder: (context) {
-              final auth = context.watch<AuthProvider>();
-              final isSuporte = auth.usuario?.isSuporte ?? false;
-              final isAdmin = auth.usuario?.perfil == Perfil.admin;
-              if (!isSuporte && !isAdmin) return const SizedBox.shrink();
-              final adminSelecionado = selectedIndex == 7 || selectedIndex == 8;
-              return _ExpandableSidebarItem(
-                icon: Icons.admin_panel_settings_rounded,
-                label: 'Administração',
-                isExpanded: adminSelecionado,
-                isSelected: adminSelecionado,
-                onTap: () => onDestinationSelected(7),
-                children: [
-                  if (isSuporte)
-                    _SidebarSubItem(
-                      label: 'Empresas',
-                      isSelected: selectedIndex == 7,
-                      onTap: () => onDestinationSelected(7),
-                    ),
-                  _SidebarSubItem(
-                    label: 'Usuários',
-                    isSelected: selectedIndex == 8,
-                    onTap: () => onDestinationSelected(8),
-                  ),
-                ],
-              );
-            },
+            ),
           ),
 
-          const Spacer(),
           const Divider(color: Color(0xFFF1F5F9), height: 1),
 
           // Botão Logout no Rodapé da Sidebar
@@ -872,13 +902,11 @@ class _SidebarItem extends StatelessWidget {
 
 class _TopNavbar extends StatelessWidget {
   final String title;
-  final VoidCallback onLogout;
   final VoidCallback onRefresh;
   final VoidCallback? onAdd;
 
   const _TopNavbar({
     required this.title,
-    required this.onLogout,
     required this.onRefresh,
     this.onAdd,
   });
@@ -915,12 +943,6 @@ class _TopNavbar extends StatelessWidget {
             icon: const Icon(Icons.refresh_rounded, color: AppTheme.textSecondary),
             tooltip: 'Atualizar',
             onPressed: onRefresh,
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: AppTheme.textSecondary),
-            tooltip: 'Sair',
-            onPressed: onLogout,
           ),
         ],
       ),

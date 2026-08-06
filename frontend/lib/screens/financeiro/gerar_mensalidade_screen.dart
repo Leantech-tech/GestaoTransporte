@@ -57,6 +57,7 @@ class _GerarMensalidadeScreenState extends State<GerarMensalidadeScreen> {
       initialDate: _dataEmissao ?? DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
+      locale: const Locale('pt', 'BR'),
       helpText: 'Selecione a data de emissão',
       cancelText: 'Cancelar',
       confirmText: 'Confirmar',

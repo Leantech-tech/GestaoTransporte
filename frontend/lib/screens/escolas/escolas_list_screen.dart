@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/app_theme.dart';
+import '../../core/cep_endereco_field.dart';
 import '../../core/input_formatters.dart';
 import '../../core/scrollable_data_table.dart';
 import '../../core/section_card.dart';
@@ -50,12 +50,6 @@ class _EscolasListScreenState extends State<EscolasListScreen> {
     final isSuporte = usuario?.isSuporte ?? false;
 
     return Scaffold(
-      floatingActionButton: isSuporte
-          ? null
-          : FloatingActionButton(
-              onPressed: () => _abrirFormulario(context),
-              child: const Icon(Icons.add),
-            ),
       body: _carregando
           ? const Center(child: CircularProgressIndicator())
           : _erro != null
@@ -102,7 +96,7 @@ class _EscolasListScreenState extends State<EscolasListScreen> {
                         child: _escolas.isEmpty
                             ? const Center(child: Text('Nenhuma escola cadastrada.'))
                             : ScrollableDataTable(
-                                columnCount: isSuporte ? 4 : 5,
+                                columnCount: isSuporte ? 5 : 6,
                                 onRefresh: _carregar,
                                 child: Card(
                                   elevation: 0,
@@ -115,6 +109,7 @@ class _EscolasListScreenState extends State<EscolasListScreen> {
                                     columns: [
                                       const DataColumn(label: Text('Nome da Escola', style: TextStyle(fontWeight: FontWeight.bold))),
                                       const DataColumn(label: Text('Endereço Completo', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      const DataColumn(label: Text('Número', style: TextStyle(fontWeight: FontWeight.bold))),
                                       const DataColumn(label: Text('Telefone', style: TextStyle(fontWeight: FontWeight.bold))),
                                       const DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
                                       if (!isSuporte)
@@ -133,6 +128,7 @@ class _EscolasListScreenState extends State<EscolasListScreen> {
                                             ),
                                           ),
                                           DataCell(Text(escola.enderecoCompleto)),
+                                          DataCell(Text(escola.numero ?? '-')),
                                           DataCell(Text(escola.telefone ?? '-')),
                                           DataCell(
                                             Container(
@@ -239,7 +235,9 @@ class EscolaFormScreen extends StatefulWidget {
 class _EscolaFormScreenState extends State<EscolaFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nomeController;
+  late final TextEditingController _cepController;
   late final TextEditingController _enderecoController;
+  late final TextEditingController _numeroController;
   late final TextEditingController _telefoneController;
   bool _ativa = true;
   bool _salvando = false;
@@ -248,7 +246,11 @@ class _EscolaFormScreenState extends State<EscolaFormScreen> {
   void initState() {
     super.initState();
     _nomeController = TextEditingController(text: widget.escola?.nome ?? '');
+    _cepController = TextEditingController(
+      text: widget.escola?.cep != null ? AppInputFormatters.formatCep(widget.escola!.cep!) : '',
+    );
     _enderecoController = TextEditingController(text: widget.escola?.enderecoCompleto ?? '');
+    _numeroController = TextEditingController(text: widget.escola?.numero ?? '');
     _telefoneController = TextEditingController(
       text: widget.escola?.telefone != null ? AppInputFormatters.formatTelefone(widget.escola!.telefone!) : '',
     );
@@ -258,7 +260,9 @@ class _EscolaFormScreenState extends State<EscolaFormScreen> {
   @override
   void dispose() {
     _nomeController.dispose();
+    _cepController.dispose();
     _enderecoController.dispose();
+    _numeroController.dispose();
     _telefoneController.dispose();
     super.dispose();
   }
@@ -285,6 +289,8 @@ class _EscolaFormScreenState extends State<EscolaFormScreen> {
         empresaId: empresaId,
         nome: _nomeController.text.trim(),
         enderecoCompleto: _enderecoController.text.trim(),
+        cep: _cepController.text.trim().isEmpty ? null : AppInputFormatters.cepRaw(_cepController.text.trim()),
+        numero: _numeroController.text.trim().isEmpty ? null : _numeroController.text.trim(),
         telefone: _telefoneController.text.trim().isEmpty ? null : _telefoneController.text.trim(),
         ativa: _ativa,
       );
@@ -333,15 +339,12 @@ class _EscolaFormScreenState extends State<EscolaFormScreen> {
                             value == null || value.trim().isEmpty ? 'Informe o nome.' : null,
                       ),
                       const SizedBox(height: 20),
-                      TextFormField(
-                        controller: _enderecoController,
-                        decoration: const InputDecoration(
-                          labelText: 'Endereço completo',
-                          prefixIcon: Icon(Icons.location_on_outlined),
-                          alignLabelWithHint: true,
-                        ),
-                        maxLines: 3,
-                        validator: (value) =>
+                      CepEnderecoField(
+                        cepController: _cepController,
+                        enderecoController: _enderecoController,
+                        numeroController: _numeroController,
+                        enderecoLabel: 'Endereço completo',
+                        enderecoValidator: (value) =>
                             value == null || value.trim().isEmpty ? 'Informe o endereço.' : null,
                       ),
                       const SizedBox(height: 20),

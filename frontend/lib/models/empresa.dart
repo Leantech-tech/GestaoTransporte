@@ -3,7 +3,9 @@ class Empresa {
   final String nome;
   final String? cnpj;
   final String? telefone;
+  final String? cep;
   final String? endereco;
+  final String? numero;
   final bool ativa;
 
   Empresa({
@@ -11,7 +13,9 @@ class Empresa {
     required this.nome,
     this.cnpj,
     this.telefone,
+    this.cep,
     this.endereco,
+    this.numero,
     this.ativa = true,
   });
 
@@ -21,7 +25,9 @@ class Empresa {
       nome: json['nome'] as String,
       cnpj: json['cnpj'] as String?,
       telefone: json['telefone'] as String?,
+      cep: json['cep'] as String?,
       endereco: json['endereco'] as String?,
+      numero: json['numero'] as String?,
       ativa: json['ativa'] as bool? ?? true,
     );
   }
@@ -31,7 +37,9 @@ class Empresa {
       'nome': nome,
       if (cnpj != null) 'cnpj': cnpj,
       if (telefone != null) 'telefone': telefone,
+      if (cep != null && cep!.isNotEmpty) 'cep': cep,
       if (endereco != null) 'endereco': endereco,
+      if (numero != null && numero!.isNotEmpty) 'numero': numero,
       'ativa': ativa,
     };
   }
@@ -41,7 +49,9 @@ class Empresa {
     String? nome,
     String? cnpj,
     String? telefone,
+    String? cep,
     String? endereco,
+    String? numero,
     bool? ativa,
   }) {
     return Empresa(
@@ -49,7 +59,9 @@ class Empresa {
       nome: nome ?? this.nome,
       cnpj: cnpj ?? this.cnpj,
       telefone: telefone ?? this.telefone,
+      cep: cep ?? this.cep,
       endereco: endereco ?? this.endereco,
+      numero: numero ?? this.numero,
       ativa: ativa ?? this.ativa,
     );
   }
